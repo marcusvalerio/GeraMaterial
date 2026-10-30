@@ -21,6 +21,7 @@ Acesse http://localhost:3000, preencha curso, UC, tema e capacidades, clique em 
 
 ## Estrutura
 - `src/server.js` – API (`/api/gerar`, `/api/exportar/:formato`)
-- `src/prompts.js` – instruções pedagógicas de cada tipo de material (ajuste aqui para o padrão da sua regional)
+- `src/prompts.js` – instruções de cada etapa da sequência (PER → Plano de Aula → PPTX → Avaliações 30/60 → Atividade)
+- `src/planilhas.js` – preenche os modelos oficiais em `modelos/` (PER .xlsx e EP-190 .xlsm) sem alterar o layout
 - `src/exportar.js` – geração de DOCX, PDF e PPTX
 - `public/` – interface web

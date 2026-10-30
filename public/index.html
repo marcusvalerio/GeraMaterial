@@ -7,41 +7,33 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><h1>GeraMaterial <span>SENAI</span></h1><p>Gerador de materiais didáticos para instrutores (MSEP)</p></header>
+<header><h1>GeraMaterial <span>SENAI</span></h1><p>Base: MSEP + documento de referência · Sequência padrão de entregas</p></header>
 <main>
   <form id="form">
-    <fieldset>
-      <legend>Tipo de material</legend>
-      <label><input type="radio" name="tipo" value="plano" checked> Plano de Aula</label>
-      <label><input type="radio" name="tipo" value="situacao"> Situação de Aprendizagem</label>
-      <label><input type="radio" name="tipo" value="avaliacao"> Avaliação e Gabarito</label>
-    </fieldset>
+    <h2>1. Base</h2>
+    <label>Documento(s) de referência (plano de curso, ementa…) — PDF, Word ou TXT
+      <input type="file" name="referencias" multiple accept=".pdf,.docx,.txt"></label>
+
+    <h2>2. Dados da turma</h2>
     <div class="grade">
-      <label>Curso <input name="curso" required placeholder="Ex.: Técnico em Eletrotécnica"></label>
-      <label>Unidade Curricular <input name="uc" required placeholder="Ex.: Instalações Elétricas Prediais"></label>
-      <label>Tema da aula <input name="tema" required placeholder="Ex.: Dimensionamento de condutores"></label>
-      <label>Carga horária <input name="cargaHoraria" placeholder="Ex.: 4 horas"></label>
+      <label>Curso <input name="curso" required></label>
+      <label>Unidade Curricular <input name="uc" required></label>
+      <label>Turma <input name="turma"></label>
+      <label>Modalidade <input name="modalidade" placeholder="Ex.: Qualificação, Técnico"></label>
+      <label>Data início da UC <input name="dataInicio" placeholder="dd/mm/aaaa"></label>
+      <label>Data término da UC <input name="dataTermino" placeholder="dd/mm/aaaa"></label>
+      <label>Dias / horário das aulas <input name="dias" placeholder="Ex.: seg a qui, 19h–22h"></label>
+      <label>Instrutor(a) <input name="instrutor"></label>
+      <label>Segmento <input name="segmento" placeholder="Ex.: GESTÃO"></label>
+      <label>Tema da situação de aprendizagem <input name="tema"></label>
     </div>
-    <label>Capacidades técnicas <textarea name="capacidadesTecnicas" rows="3" placeholder="Cole as capacidades do plano de curso"></textarea></label>
-    <label>Capacidades socioemocionais <textarea name="capacidadesSocio" rows="2"></textarea></label>
-    <label>Conhecimentos <textarea name="conhecimentos" rows="3"></textarea></label>
-    <div class="grade">
-      <label>Perfil da turma <input name="perfilTurma" placeholder="Ex.: 30 alunos, noturno, iniciantes"></label>
-      <label>Recursos / ambiente <input name="recursos" placeholder="Ex.: laboratório, bancadas, multímetros"></label>
-    </div>
-    <label>Observações <textarea name="observacoes" rows="2" placeholder="Qualquer orientação extra (nº de questões, estratégia preferida...)"></textarea></label>
-    <button type="submit" id="btnGerar">Gerar material</button>
+    <label>Recursos / ambiente <input name="recursos" placeholder="Ex.: laboratório, computadores, post-it"></label>
+    <label>Observações <textarea name="observacoes" rows="2"></textarea></label>
+    <button type="submit" id="btnGerar">Gerar sequência completa</button>
     <p id="status"></p>
   </form>
 
-  <section id="resultado" hidden>
-    <div class="acoes">
-      <button data-fmt="docx">Baixar Word</button>
-      <button data-fmt="pdf">Baixar PDF</button>
-      <button data-fmt="pptx">Baixar Slides</button>
-    </div>
-    <article id="previa"></article>
-  </section>
+  <section id="etapas"></section>
 </main>
 <script src="app.js"></script>
 </body>

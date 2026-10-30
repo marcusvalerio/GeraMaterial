@@ -21,3 +21,8 @@ button:disabled { opacity: .6; cursor: wait; }
 #previa table { border-collapse: collapse; width: 100%; font-size: .9rem; display: block; overflow-x: auto; }
 #previa th, #previa td { border: 1px solid #ccd; padding: 6px; text-align: left; vertical-align: top; }
 #previa th { background: var(--azul); color: #fff; }
+h2 { color: var(--azul); font-size: 1.1rem; }
+.etapa { background: #fff; border-left: 5px solid var(--azul); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 1px 4px #0002; }
+.etapa h3 { margin: 0 0 4px; color: var(--azul); }
+.estado { margin: 0 0 8px; }
+input[type=file] { font-weight: 400; margin-top: 6px; display: block; }

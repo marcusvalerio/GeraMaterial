@@ -1,15 +1,19 @@
 import express from "express";
+import multer from "multer";
+import mammoth from "mammoth";
 import Anthropic from "@anthropic-ai/sdk";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { montarPrompt, TIPOS } from "./prompts.js";
+import { SISTEMA, ETAPAS, ORDEM, contexto } from "./prompts.js";
 import { gerarDocx, gerarPdf, gerarPptx } from "./exportar.js";
+import { gerarPER, gerarEP190 } from "./planilhas.js";
 
 const app = express();
 const client = new Anthropic(); // usa ANTHROPIC_API_KEY
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 const raiz = path.dirname(fileURLToPath(import.meta.url));
 
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "5mb" }));
 app.use(express.static(path.join(raiz, "..", "public")));
 
 function extrairJson(texto) {
@@ -19,10 +23,41 @@ function extrairJson(texto) {
   return JSON.parse(texto.slice(ini, fim + 1));
 }
 
-app.post("/api/gerar", async (req, res) => {
+// Converte os documentos de referência em blocos de conteúdo para a IA.
+async function blocosReferencia(arquivos) {
+  const blocos = [];
+  for (const f of arquivos || []) {
+    const nome = f.originalname;
+    if (f.mimetype === "application/pdf" || nome.toLowerCase().endsWith(".pdf")) {
+      blocos.push({ type: "document", title: nome,
+        source: { type: "base64", media_type: "application/pdf", data: f.buffer.toString("base64") } });
+    } else if (nome.toLowerCase().endsWith(".docx")) {
+      const { value } = await mammoth.extractRawText({ buffer: f.buffer });
+      blocos.push({ type: "text", text: `DOCUMENTO DE REFERÊNCIA (${nome}):\n${value}` });
+    } else {
+      blocos.push({ type: "text", text: `DOCUMENTO DE REFERÊNCIA (${nome}):\n${f.buffer.toString("utf8")}` });
+    }
+  }
+  return blocos;
+}
+
+// Gera uma etapa da sequência. Recebe os dados, os documentos de referência e
+// o resultado das etapas anteriores (para manter tudo coerente).
+app.post("/api/gerar/:etapa", upload.array("referencias"), async (req, res) => {
   try {
-    const { tipo, dados } = req.body;
-    const { system, user } = montarPrompt(tipo, dados || {});
+    const etapa = ETAPAS[req.params.etapa];
+    if (!etapa) return res.status(400).json({ erro: "Etapa inválida" });
+    const dados = JSON.parse(req.body.dados || "{}");
+    const anteriores = JSON.parse(req.body.anteriores || "{}");
+
+    const ctxAnteriores = ORDEM.filter((k) => anteriores[k])
+      .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
+
+    const content = [
+      ...(await blocosReferencia(req.files)),
+      { type: "text", text: `${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}` },
+    ];
+
     const resposta = await client.beta.messages
       .stream({
         model: "claude-opus-5-5",
@@ -30,8 +65,8 @@ app.post("/api/gerar", async (req, res) => {
         output_config: { effort: "medium" },
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",
-        system,
-        messages: [{ role: "user", content: user }],
+        system: SISTEMA,
+        messages: [{ role: "user", content }],
       })
       .finalMessage();
 
@@ -47,10 +82,14 @@ app.post("/api/gerar", async (req, res) => {
   }
 });
 
+const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const EXPORTADORES = {
-  docx: [gerarDocx, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
-  pdf: [gerarPdf, "application/pdf"],
-  pptx: [gerarPptx, "application/vnd.openxmlformats-officedocument.presentationml.presentation"],
+  per: [gerarPER, XLSX, "xlsx"],
+  ep190: [gerarEP190, "application/vnd.ms-excel.sheet.macroEnabled.12", "xlsm"],
+  docx: [gerarDocx, DOCX, "docx"],
+  pdf: [gerarPdf, "application/pdf", "pdf"],
+  pptx: [gerarPptx, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
 };
 
 app.post("/api/exportar/:formato", async (req, res) => {
@@ -58,9 +97,10 @@ app.post("/api/exportar/:formato", async (req, res) => {
   if (!exp) return res.status(400).json({ erro: "Formato inválido" });
   try {
     const buf = await exp[0](req.body);
-    const nome = (req.body.titulo || "material").replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 80).trim() || "material";
+    const nome = String(req.query.nome || req.body.titulo || "material")
+      .replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 80).trim() || "material";
     res.setHeader("Content-Type", exp[1]);
-    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(nome)}.${req.params.formato}`);
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(nome)}.${exp[2]}`);
     res.send(Buffer.from(buf));
   } catch (e) {
     console.error(e);
@@ -68,7 +108,7 @@ app.post("/api/exportar/:formato", async (req, res) => {
   }
 });
 
-app.get("/api/tipos", (_req, res) => res.json(TIPOS));
+app.get("/api/etapas", (_req, res) => res.json(ORDEM.map((k) => ({ id: k, nome: ETAPAS[k].nome }))));
 
 const porta = process.env.PORT || 3000;
 app.listen(porta, () => console.log(`GeraMaterial SENAI rodando em http://localhost:${porta}`));
