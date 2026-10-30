@@ -65,9 +65,9 @@
           <div class="grade">
             <label>Turma<input name="turma" placeholder="QUA0250.02"></label>
             <label>Modalidade<input name="modalidade" placeholder="Qualificação profissional"></label>
-            <label>Início da UC<input name="dataInicio" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-            <label>Término da UC<input name="dataTermino" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
-            <label>Dias e horário<input name="dias" placeholder="Seg a sex, 18h às 22h"></label>
+            <label class="so-manual">Início da UC<input name="dataInicio" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+            <label class="so-manual">Término da UC<input name="dataTermino" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+            <label>Horário das aulas<input name="dias" placeholder="18h às 22h"></label>
             <label>Segmento<input name="segmento" placeholder="Logística"></label>
             <label class="larga">Tema da situação de aprendizagem<input name="tema" placeholder="Armazenagem e curva ABC"></label>
             <label class="larga">Recursos e ambiente<input name="recursos" placeholder="Laboratório, paleteira, computadores"></label>
@@ -76,8 +76,28 @@
         </details>
       </section>
 
+      <section class="passo" id="passoCal" hidden>
+        <div class="passo-cab"><span class="passo-n">3</span><h2>Calendário da turma</h2></div>
+        <p class="passo-ajuda">Com a carga horária do plano de curso, o sistema distribui as aulas pelas datas, pulando feriados nacionais.</p>
+        <div class="grade">
+          <label>Início do curso<input type="date" name="inicioCurso" id="inicioCurso"></label>
+          <label>Horas por aula<input type="number" name="horasAula" id="horasAula" min="1" max="12" step="0.5" value="4" inputmode="decimal"></label>
+        </div>
+        <fieldset class="dias-semana" id="diasSemana">
+          <legend>Dias de aula</legend>
+          <label><input type="checkbox" value="1" checked>Seg</label>
+          <label><input type="checkbox" value="2" checked>Ter</label>
+          <label><input type="checkbox" value="3" checked>Qua</label>
+          <label><input type="checkbox" value="4" checked>Qui</label>
+          <label><input type="checkbox" value="5" checked>Sex</label>
+          <label><input type="checkbox" value="6">Sáb</label>
+        </fieldset>
+        <label>Outros dias sem aula <span class="opcional">(opcional)</span><input name="semAula" id="semAula" placeholder="Ex.: 24/12/2026 a 06/01/2027, 08/12/2026"></label>
+        <div class="cronograma" id="cronograma" aria-live="polite"></div>
+      </section>
+
       <section class="passo" id="passo3">
-        <div class="passo-cab"><span class="passo-n">3</span><h2>Gerar</h2></div>
+        <div class="passo-cab"><span class="passo-n" id="numGerar">3</span><h2>Gerar</h2></div>
         <p class="passo-ajuda" id="ajudaGerar">Leva de 5 a 15 minutos por unidade curricular. Pode baixar cada material assim que ele ficar pronto.</p>
         <button type="submit" class="btn-gerar" id="btnGerar">Gerar os cinco materiais</button>
         <p class="aviso" id="aviso" role="status"></p>
@@ -96,6 +116,6 @@
     </section>
   </div>
 </main>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

@@ -96,7 +96,11 @@ export function contexto(d) {
   return `Dados informados pelo instrutor:
 - Curso: ${d.curso || "-"}${d.cargaHorariaCurso ? ` (${d.cargaHorariaCurso})` : ""}
 - Unidade Curricular (UC): ${d.uc || "-"}${d.cargaHorariaUC ? ` — carga horária ${d.cargaHorariaUC}` : ""}${d.modulo ? ` — módulo ${d.modulo}` : ""}
-- Gere o material SOMENTE para esta unidade curricular; use do documento apenas a parte dela.
+- Gere o material SOMENTE para esta unidade curricular; use do documento apenas a parte dela.${Array.isArray(d.aulasCronograma) && d.aulasCronograma.length ? `
+- Calendário definido: ${d.aulasCronograma.length} aulas de ${d.horasAula || "?"}h (${d.diasAula || "-"}), de ${d.dataInicio} a ${d.dataTermino}.
+  Datas das aulas: ${d.aulasCronograma.map((a) => a.data).join(", ")}.
+  Distribua capacidades, conhecimentos, estratégias e avaliações ao longo dessas aulas; marque a avaliação de 30 pontos
+  por volta da metade e a de 60 pontos na última aula.` : ""}
 - Turma: ${d.turma || "-"} | Modalidade: ${d.modalidade || "-"}
 - Datas da UC: ${d.dataInicio || "-"} a ${d.dataTermino || "-"} | Dias/horário: ${d.dias || "-"}
 - Instrutor: ${d.instrutor || "-"} | Segmento: ${d.segmento || "-"}

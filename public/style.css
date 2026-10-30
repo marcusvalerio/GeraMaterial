@@ -187,3 +187,40 @@ input.invalido { border-color: var(--erro); box-shadow: 0 0 0 3px #c4283a1f; }
 }
 .nota-fonte { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--linha); font-size: .8rem; color: var(--tinta-3); line-height: 1.45; }
 .nota-fonte a { color: var(--azul); font-weight: 600; }
+
+/* ---------- Calendário da turma ---------- */
+input[type=date] { font-family: var(--texto); }
+.opcional { color: var(--tinta-3); font-weight: 400; }
+.dias-semana { border: 0; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.dias-semana legend { font-family: var(--ui); font-size: .88rem; font-weight: 600; margin-bottom: 8px; padding: 0; }
+.dias-semana label { margin: 0; display: inline-flex; align-items: center; cursor: pointer; }
+.dias-semana input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.dias-semana label { padding: 8px 14px; border: 1px solid var(--linha); border-radius: 999px; background: var(--folha); font-weight: 600; color: var(--tinta-2); transition: background .15s, border-color .15s, color .15s; }
+.dias-semana label:has(input:checked) { background: var(--azul); border-color: var(--azul); color: #fff; }
+.dias-semana label:has(input:focus-visible) { outline: 3px solid var(--azul); outline-offset: 2px; }
+.cronograma:empty { display: none; }
+.cronograma { background: var(--folha); border: 1px solid var(--linha); border-radius: var(--raio); padding: 18px 20px; }
+.crono-resumo { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-bottom: 14px; }
+.crono-resumo div { min-width: 90px; }
+.crono-resumo strong { display: block; font-family: var(--serif); font-size: 1.6rem; font-weight: 400; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.crono-resumo span { font-size: .8rem; color: var(--tinta-3); }
+.crono-periodo { font-size: .92rem; color: var(--tinta-2); margin: 0 0 14px; }
+.crono-tabela { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.crono-tabela th { text-align: left; font-family: var(--ui); font-weight: 600; font-size: .78rem; color: var(--tinta-3); padding: 6px 8px; border-bottom: 1px solid var(--linha); }
+.crono-tabela td { padding: 9px 8px; border-bottom: 1px solid var(--linha); vertical-align: top; font-variant-numeric: tabular-nums; }
+.crono-tabela tr:last-child td { border-bottom: 0; }
+.crono-tabela tr.escolhida td { background: var(--azul-claro); }
+.crono-tabela tr.escolhida td:first-child { box-shadow: inset 3px 0 0 var(--azul); }
+.crono-tabela .num { text-align: right; white-space: nowrap; }
+.crono-meses { display: flex; gap: 4px; margin: 16px 0 6px; }
+.crono-meses div { flex: var(--peso) 1 0; min-width: 0; background: var(--azul-claro); border-radius: 6px; padding: 8px 10px; }
+.crono-meses strong { display: block; font-family: var(--ui); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crono-meses span { font-size: .78rem; color: var(--tinta-2); }
+.crono-pulados { margin-top: 12px; font-size: .85rem; color: var(--tinta-2); }
+.crono-pulados summary { cursor: pointer; font-family: var(--ui); font-weight: 600; color: var(--azul); }
+.crono-pulados ul { margin: 8px 0 0; padding-left: 18px; columns: 2; }
+.crono-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.crono-acoes button { font-family: var(--ui); font-size: .85rem; font-weight: 600; border: 1px solid var(--linha); background: var(--folha); color: var(--azul); border-radius: 8px; padding: 7px 12px; }
+.crono-acoes button:hover { border-color: var(--azul); background: var(--azul-claro); }
+.tabela-rolagem { overflow-x: auto; }
+@media (max-width: 560px) { .crono-pulados ul { columns: 1; } .crono-meses { flex-wrap: wrap; } .crono-meses div { flex-basis: 45%; } }

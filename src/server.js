@@ -9,6 +9,7 @@ import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto } from "./prompts.js";
 import { gerarDocx, gerarPdf } from "./exportar.js";
 import { gerarSlides } from "./slides.js";
+import { gerarCronograma } from "./cronograma.js";
 import { gerarPER, gerarEP190 } from "./planilhas.js";
 import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, bancoAtivo } from "./db.js";
 
@@ -79,6 +80,13 @@ app.post("/api/gerar/:etapa", upload.array("referencias"), async (req, res) => {
     const usuario = `${await textoReferencias(req.files)}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
     const texto = await perguntar(SISTEMA, usuario);
     const resultado = extrairJson(texto);
+    // O PER usa as datas do calendário calculado (exatas), não as que a IA sugerir.
+    if (req.params.etapa === "per" && Array.isArray(dados.aulasCronograma) && dados.aulasCronograma.length) {
+      resultado.aulas = dados.aulasCronograma;
+      if (dados.dataInicio) resultado.dataInicio = dados.dataInicio;
+      if (dados.dataTermino) resultado.dataTermino = dados.dataTermino;
+      if (dados.cargaHorariaUC) resultado.cargaHorariaUC = dados.cargaHorariaUC;
+    }
     // Cria o registro da sequência na 1ª etapa e salva cada entrega no histórico.
     let sequenciaId = Number(req.body.sequenciaId) || null;
     try {
@@ -99,6 +107,7 @@ const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.doc
 const EXPORTADORES = {
   per: [gerarPER, XLSX, "xlsx"],
   ep190: [gerarEP190, "application/vnd.ms-excel.sheet.macroEnabled.12", "xlsm"],
+  cronograma: [gerarCronograma, XLSX, "xlsx"],
   docx: [gerarDocx, DOCX, "docx"],
   pdf: [gerarPdf, "application/pdf", "pdf"],
   pptx: [gerarSlides, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],

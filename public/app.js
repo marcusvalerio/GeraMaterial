@@ -1,3 +1,5 @@
+import { montarCronograma, cronogramaDaUc, lerDiasSemAula, dataBr } from "./cronograma.js";
+
 // Sequência padrão: cada etapa usa o resultado das anteriores.
 const ETAPAS = [
   { id: "per", nome: "PER – Plano de Ensino e Recursos", formato: "Excel",
@@ -26,6 +28,7 @@ const nomeArquivo = (t) => String(t || "").replace(/[\\/:*?"<>|]/g, "").slice(0,
 
 // Estado: o plano de curso lido e a fila de UCs a gerar (cada UC tem sua própria sequência).
 let analise = null; // { curso, cargaHoraria, modalidade, ucs: [...] }
+let crono = null; // cronograma calculado a partir das cargas horárias
 let fila = [novoItem()];
 let atual = 0;
 let gerando = false;
@@ -100,7 +103,7 @@ async function baixar(fmt, dados, nome) {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados),
   });
   if (!r.ok) return avisar("Não foi possível baixar o arquivo. Tente de novo em instantes.", true);
-  const ext = { per: "xlsx", ep190: "xlsm" }[fmt] || fmt;
+  const ext = { per: "xlsx", ep190: "xlsm", cronograma: "xlsx" }[fmt] || fmt;
   const url = URL.createObjectURL(await r.blob());
   Object.assign(document.createElement("a"), { href: url, download: `${nome}.${ext}` }).click();
   URL.revokeObjectURL(url);
@@ -125,6 +128,7 @@ async function analisarPlano() {
     if (!j.ucs?.length) throw new Error("Não encontramos unidades curriculares neste arquivo. Confira se é o plano de curso ou preencha a UC manualmente no passo 2.");
     analise = j;
     mostrarAnalise();
+    calcularCronograma();
   } catch (e) {
     caixa.className = "analise erro";
     caixa.textContent = e.message;
@@ -165,6 +169,7 @@ function ucsEscolhidas() {
 
 function aoEscolherUc() {
   aplicarModoUc();
+  calcularCronograma();
   marcarPassos();
   if (gerando) return;
   // Monta a fila de UCs escolhidas, mantendo o que já foi gerado.
@@ -180,6 +185,9 @@ function aplicarModoUc() {
   const comLista = Boolean(analise);
   const n = ucsEscolhidas().length;
   $("#campoUc").hidden = comLista;
+  $("#passoCal").hidden = !comLista;
+  $("#numGerar").textContent = comLista ? "4" : "3";
+  document.querySelectorAll(".so-manual").forEach((el) => { el.hidden = comLista; });
   $("#campoUc input").required = !comLista;
   $("#ajudaTurma").textContent = comLista
     ? "Confira o curso e informe quem dá a aula. O resto deixa o material mais certeiro."
@@ -198,6 +206,64 @@ function aplicarModoUc() {
   $("#btnGerar").textContent = n > 1 ? `Gerar materiais de ${n} unidades curriculares` : "Gerar os cinco materiais";
 }
 
+// ---------- Calendário da turma ----------
+function diasEscolhidos() {
+  return [...document.querySelectorAll("#diasSemana input:checked")].map((c) => Number(c.value));
+}
+
+function calcularCronograma() {
+  const caixa = $("#cronograma");
+  crono = null;
+  if (!analise) { caixa.innerHTML = ""; return; }
+  const valorInicio = $("#inicioCurso").value;
+  const horasAula = Number(String($("#horasAula").value).replace(",", "."));
+  const dias = diasEscolhidos();
+  if (!valorInicio || !(horasAula > 0) || !dias.length) {
+    caixa.innerHTML = `<p class="crono-periodo">${!valorInicio ? "Informe a data de início do curso para ver o calendário."
+      : !dias.length ? "Escolha pelo menos um dia de aula." : "Informe quantas horas tem cada aula."}</p>`;
+    return;
+  }
+  const [a, m, d] = valorInicio.split("-").map(Number);
+  crono = montarCronograma(analise.ucs, { inicio: new Date(a, m - 1, d), horasAula, dias, semAula: lerDiasSemAula($("#semAula").value) });
+  if (!crono) { caixa.innerHTML = ""; return; }
+  const escolhidas = new Set(ucsEscolhidas().map((u) => u.nome));
+  const maxAulas = Math.max(...crono.meses.map((x) => x.aulas));
+  caixa.innerHTML = `
+    <div class="crono-resumo">
+      <div><strong>${crono.totalAulas}</strong><span>aulas de ${String(horasAula).replace(".", ",")}h</span></div>
+      <div><strong>${crono.semanas}</strong><span>semanas</span></div>
+      <div><strong>${crono.meses.length}</strong><span>${crono.meses.length === 1 ? "mês" : "meses"}</span></div>
+      <div><strong>${crono.totalHoras}h</strong><span>carga horária</span></div>
+    </div>
+    <p class="crono-periodo">O curso vai de <strong>${dataBr(crono.inicio)}</strong> a <strong>${dataBr(crono.termino)}</strong>.</p>
+    <div class="tabela-rolagem"><table class="crono-tabela">
+      <thead><tr><th>Unidade curricular</th><th class="num">Horas</th><th class="num">Aulas</th><th class="num">Início</th><th class="num">Término</th><th class="num">Semanas</th></tr></thead>
+      <tbody>${crono.ucs.map((u) => `<tr class="${escolhidas.has(u.nome) ? "escolhida" : ""}">
+        <td>${esc(u.nome)}</td><td class="num">${u.horas}h</td><td class="num">${u.aulas.length}</td>
+        <td class="num">${u.inicio ? dataBr(u.inicio) : "-"}</td><td class="num">${u.termino ? dataBr(u.termino) : "-"}</td><td class="num">${u.semanas}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <div class="crono-meses">${crono.meses.map((x) => `<div style="--peso:${Math.max(1, Math.round((x.aulas / maxAulas) * 10))}">
+      <strong title="${esc(x.rotulo)}">${esc(x.rotulo)}</strong><span>${x.aulas} aulas · ${x.horas}h</span></div>`).join("")}</div>
+    ${crono.pulados.length ? `<details class="crono-pulados"><summary>${crono.pulados.length} ${crono.pulados.length === 1 ? "dia pulado" : "dias pulados"} (feriados e dias sem aula)</summary>
+      <ul>${crono.pulados.map((p) => `<li>${dataBr(p.data)} — ${esc(p.motivo)}</li>`).join("")}</ul></details>` : ""}
+    <div class="crono-acoes"><button type="button" id="btnCrono">Baixar calendário (Excel)</button></div>`;
+  $("#btnCrono").onclick = baixarCronograma;
+}
+
+async function baixarCronograma() {
+  if (!crono) return;
+  const corpo = {
+    curso: analise.curso, turma: $("#form").elements.turma.value, instrutor: $("#form").elements.instrutor.value,
+    horasAula: $("#horasAula").value, dias: diasEscolhidos().map((d) => ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][d]).join(", "),
+    inicio: dataBr(crono.inicio), termino: dataBr(crono.termino), totalAulas: crono.totalAulas, totalHoras: crono.totalHoras, semanas: crono.semanas,
+    ucs: crono.ucs.map((u) => ({ nome: u.nome, modulo: u.modulo || "", horas: u.horas, inicio: u.inicio ? dataBr(u.inicio) : "",
+      termino: u.termino ? dataBr(u.termino) : "", semanas: u.semanas,
+      aulas: u.aulas.map((a) => ({ data: dataBr(a.data), dia: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][a.data.getDay()], ch: a.ch })) })),
+    meses: crono.meses, pulados: crono.pulados.map((p) => ({ data: dataBr(p.data), motivo: p.motivo })),
+  };
+  await baixar("cronograma", corpo, `Calendario - ${nomeArquivo(analise.curso)}`);
+}
+
 // ---------- Geração ----------
 function validar() {
   const form = $("#form");
@@ -206,6 +272,11 @@ function validar() {
   if (analise && !ucsEscolhidas().length) {
     avisar("Escolha pelo menos uma unidade curricular no passo 1.", true);
     $("#analise").scrollIntoView({ behavior: "smooth", block: "center" });
+    return false;
+  }
+  if (analise && !crono) {
+    avisar("Preencha o calendário da turma (início do curso, horas por aula e dias de aula).", true);
+    $("#passoCal").scrollIntoView({ behavior: "smooth", block: "center" });
     return false;
   }
   if (faltando.length) {
@@ -218,8 +289,11 @@ function validar() {
 
 function dadosDaUc(base, uc) {
   if (!uc) return base;
+  const datas = cronogramaDaUc(crono, uc.nome);
   return { ...base, uc: uc.nome, cargaHorariaUC: uc.cargaHoraria || "", modulo: uc.modulo || "",
-    cargaHorariaCurso: analise?.cargaHoraria || "" };
+    cargaHorariaCurso: analise?.cargaHoraria || "",
+    ...(datas ? { dataInicio: datas.dataInicio, dataTermino: datas.dataTermino, aulasCronograma: datas.aulas,
+      horasAula: base.horasAula, diasAula: diasEscolhidos().map((d) => ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][d]).join(", ") } : {}) };
 }
 
 // Gera a fila a partir da UC `inicioUc`, começando na etapa `inicioEtapa` dela.
@@ -334,6 +408,8 @@ async function abrir(id) {
 
 function limparPlano() {
   analise = null;
+  crono = null;
+  $("#cronograma").innerHTML = "";
   inputArq.value = "";
   $("#listaArquivos").innerHTML = "";
   $("#analise").hidden = true;
@@ -396,6 +472,9 @@ const up = $("#upload");
 up.ondragover = (e) => { e.preventDefault(); up.classList.add("arrastando"); };
 up.ondragleave = () => up.classList.remove("arrastando");
 up.ondrop = (e) => { e.preventDefault(); up.classList.remove("arrastando"); inputArq.files = e.dataTransfer.files; aoTrocarArquivo(); };
+
+["#inicioCurso", "#horasAula", "#semAula"].forEach((sel) => $(sel).addEventListener("input", calcularCronograma));
+$("#diasSemana").addEventListener("change", calcularCronograma);
 
 aplicarModoUc();
 render();
