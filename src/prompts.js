@@ -1,3 +1,4 @@
+import { ICONES } from "./slides.js";
 // Sequência de entregas (padrão): 1º PER, 2º Plano de Aula (EP-190), 3º PPTX,
 // 4º Avaliações (30 e 60 pontos), 5º Atividade do educador (teórica e prática).
 // Base: MSEP + documento de referência enviado pelo instrutor.
@@ -39,22 +40,28 @@ export const ETAPAS = {
   },
   slides: {
     nome: "Slides da aula (PPTX)",
-    instrucao: `Com base no Plano de Aula, crie uma apresentação MODERNA e VISUAL para a aula (14 a 20 slides).
-Varie os layouts; textos curtos (máx. ~15 palavras por item); nada de parágrafos longos. JSON:
-{ "titulo": "", "subtitulo": "", "slides": [ ... ] }
-Cada slide tem "layout" e os campos do layout:
-- "capa": { titulo, subtitulo }                                   (sempre o 1º)
-- "objetivos": { titulo, itens: ["..."] }                         (3 a 5 objetivos da aula)
-- "secao": { numero: "01", titulo, subtitulo }                    (abre cada bloco de conteúdo)
-- "cards": { titulo, cards: [ { icone: "emoji", titulo, texto } ] }   (3 ou 4 cards)
-- "passos": { titulo, passos: [ { titulo, texto } ] }             (processo/etapas, 3 a 5)
-- "comparacao": { titulo, esquerda: { titulo, itens }, direita: { titulo, itens } }
-- "destaque": { titulo, numero: "80%", texto }                    (dado, conceito-chave ou frase de impacto)
-- "topicos": { titulo, itens: ["..."] }                           (máx. 5 itens)
-- "exemplo": { titulo, contexto, pergunta }                       (caso real do mundo do trabalho)
-- "atividade": { titulo, tempo: "30 min", instrucoes: ["..."], entrega }
-- "resumo": { titulo, itens: ["..."] }                            (penúltimo)
-- "encerramento": { titulo, texto }                               (sempre o último)`,
+    instrucao: `Com base no PER e no Plano de Aula, crie a apresentação da aula (18 a 26 slides), no estilo editorial do SENAI:
+objetiva, organizada em BLOCOS de conteúdo, com exemplos reais do mundo do trabalho. PROIBIDO usar emojis em qualquer texto.
+Ícones: use SOMENTE nomes desta lista no campo "icone": ${ICONES.join(", ")}.
+Cada slide tem "olho" (rótulo curto acima do título, ex.: "BLOCO 1 · FUNDAMENTOS") e textos curtos. JSON:
+{ "titulo": "", "rodape": "Curso | Unidade Curricular", "professor": "Professor(a) Nome", "slides": [ ... ] }
+Layouts disponíveis ("layout") e seus campos:
+- "capa" (1º slide): { olho: "SENAI · CURSO", contexto: "UC", modulo: "MÓDULO X", titulo, professor, subtitulo: "Carga horária...",
+   lateral: [ { rotulo: "AULA 01", texto: "temas" } ] }
+- "abertura" (início de cada aula/encontro): { olho: "Aula", numero: "01", titulo, subtitulo: "4 horas · teoria e prática", itens: ["tópicos da aula"] }
+- "objetivos": { olho, titulo: "Ao final desta aula, você será capaz de:", itens: [4 a 6 objetivos] }
+- "conceito": { olho, titulo, texto: "definição", cards: [ { icone, titulo, texto } ] (3 a 6), exemplo: { rotulo: "NA ROTINA", titulo, texto }, nota }
+- "cards": { olho, titulo, cards: [ { icone, titulo, texto, citacao } ] (2 a 4), destaque: índice do card em destaque (opcional), nota }
+- "jornada": { olho, titulo, passos: [ { icone, rotulo, titulo, texto } ] (3 a 5), nota }
+- "fluxo": { olho, titulo, passos: [ { titulo } ] (4 a 6), destaque: índice, esquerda: { rotulo: "EXEMPLO", titulo, texto }, direita: { rotulo: "ATENÇÃO", titulo, texto } }
+- "comparacao": { olho, titulo, esquerda: { rotulo, icone, titulo, itens, exemplo }, direita: { rotulo, icone, titulo, itens, exemplo } }
+- "lista": { olho, titulo, itens: [ { icone, titulo, texto } ] (3 a 5), nota }
+- "escala": { olho, titulo, texto, pontos: [ { rotulo, valor } ] (3: ideal, realista, limite), cards: [ { titulo, texto } ] (2), nota }
+- "tabela": { olho, titulo, cabecalho: [...], linhas: [[...]] (até 8), alertas: ["erros comuns"] (opcional), nota }
+- "caso": { olho, titulo, rotulo: "SITUAÇÃO", situacao: "texto do caso", tempo: "20 min", perguntas: [3 a 5] }
+- "atividade": { olho, titulo, tempo, instrucoes: [...], entrega }
+- "questoes": { olho, titulo, itens: [perguntas de fixação], nota }
+- "sintese" (último): { olho: "SÍNTESE", titulo: "O que levamos desta aula", frase: "frase de impacto", itens: [4 a 6] }`,
   },
   avaliacao: {
     nome: "Avaliações (30 e 60 pontos)",
