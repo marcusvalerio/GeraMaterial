@@ -34,8 +34,8 @@ export async function gerarDocx(m) {
     styles: {
       default: { document: { run: { font: "Inter", size: 22 } } },
       paragraphStyles: [
-        { id: "Title", name: "Title", basedOn: "Normal", run: { font: "Geist Serif", size: 44, color: AZUL } },
-        { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", run: { font: "Geist Serif", size: 30, color: AZUL },
+        { id: "Title", name: "Title", basedOn: "Normal", run: { font: "Inter", bold: true, size: 40, color: AZUL } },
+        { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", run: { font: "Inter", bold: true, size: 28, color: AZUL },
           paragraph: { spacing: { before: 280, after: 120 } } },
       ],
     },
@@ -51,8 +51,7 @@ export function gerarPdf(m) {
     doc.on("end", () => resolve(Buffer.concat(partes)));
     doc.on("error", reject);
     // No PDF as fontes vão embutidas: o visual fica certo mesmo sem instalar nada.
-    doc.registerFont("Titulo", path.join(FONTES, "GeistSerif-Regular.ttf"));
-    doc.registerFont("Rotulo", path.join(FONTES, "Geist-SemiBold.ttf"));
+    doc.registerFont("Titulo", path.join(FONTES, "Inter-Bold.otf"));
     doc.registerFont("Texto", path.join(FONTES, "Inter-Regular.otf"));
     doc.registerFont("TextoNegrito", path.join(FONTES, "Inter-Bold.otf"));
 

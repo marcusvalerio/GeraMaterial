@@ -12,10 +12,10 @@ const C = {
   texto: "0B1A2E", cinza: "5B6675", borda: "D9DEE5", branco: "FFFFFF", vermelho: "C8102E",
   vermelhoFundo: "FBECEE", verde: "1E8E3E",
 };
-// Tipografia: títulos em Geist Serif, texto em Inter, rótulos/números/rodapé em Geist (sans).
+// Tipografia dos materiais: tudo em Inter (a Geist Serif é usada só nos títulos do site).
 const F = "Inter";
-const FT = "Geist Serif";
-const FL = "Geist";
+const FT = F;
+const FL = F;
 // Escala de fonte: todos os tamanhos passam por fs() (fácil ajustar num lugar só).
 const ESCALA = 1.25;
 const fs = (n) => Math.round(n * ESCALA);
@@ -62,7 +62,7 @@ function addIcone(s, nome, x, y, tam, cor = C.azul) {
 // ---------- Peças comuns ----------
 function olhoTitulo(s, olho, titulo) {
   if (olho) s.addText(txt(olho).toUpperCase(), { x: MX, y: 0.38, w: W - 2 * MX, h: 0.28, fontFace: FL, fontSize: fs(10), bold: true, color: C.azul, charSpacing: 1 });
-  s.addText(txt(titulo), { x: MX, y: 0.66, w: W - 2 * MX, h: 0.75, fontFace: FT, fontSize: 34, color: C.texto, valign: "middle", fit: "shrink" });
+  s.addText(txt(titulo), { x: MX, y: 0.66, w: W - 2 * MX, h: 0.75, fontFace: FT, bold: true, fontSize: 34, color: C.texto, valign: "middle", fit: "shrink" });
 }
 function rodape(s, m, n, escuro = false) {
   const cor = escuro ? C.azulClaro : C.cinza;
@@ -90,7 +90,7 @@ const L = {
     s.addText(txt(d.olho || m.rodape).toUpperCase(), { x: MX, y: 0.55, w: 7.5, h: 0.3, fontFace: FL, fontSize: fs(10), bold: true, color: C.azul, charSpacing: 1 });
     s.addText(txt(d.contexto), { x: MX, y: 0.9, w: 7.5, h: 0.35, fontFace: F, fontSize: fs(13), color: C.cinza });
     if (d.modulo) s.addText(txt(d.modulo).toUpperCase(), { x: MX, y: 2.55, w: 7.5, h: 0.3, fontFace: F, fontSize: fs(11), bold: true, color: C.azul });
-    s.addText(txt(d.titulo), { x: MX, y: 2.9, w: 7.6, h: 1.8, fontFace: FT, fontSize: fs(38), color: C.texto, valign: "top", fit: "shrink" });
+    s.addText(txt(d.titulo), { x: MX, y: 2.9, w: 7.6, h: 1.8, fontFace: FT, bold: true, fontSize: fs(38), color: C.texto, valign: "top", fit: "shrink" });
     s.addShape("line", { x: MX, y: 5.55, w: 7.4, h: 0, line: { color: C.navy, width: 1.5 } });
     s.addText(txt(d.professor || m.professor), { x: MX, y: 5.7, w: 7.5, h: 0.35, fontFace: F, fontSize: fs(14), bold: true, color: C.navy });
     s.addText(txt(d.subtitulo), { x: MX, y: 6.05, w: 7.5, h: 0.3, fontFace: F, fontSize: fs(10), color: C.cinza });
@@ -104,7 +104,7 @@ const L = {
     s.background = { color: C.navy };
     s.addText(txt(d.olho || "Aula").toUpperCase(), { x: MX, y: 0.8, w: 5, h: 0.3, fontFace: FL, fontSize: fs(10), bold: true, color: C.azulClaro });
     s.addText(txt(d.numero), { x: MX, y: 1.1, w: 6, h: 1.8, fontFace: FL, fontSize: fs(96), bold: true, color: C.branco });
-    s.addText(txt(d.titulo), { x: MX, y: 3.1, w: 7.6, h: 1.7, fontFace: FT, fontSize: fs(32), color: C.branco, valign: "top", fit: "shrink" });
+    s.addText(txt(d.titulo), { x: MX, y: 3.1, w: 7.6, h: 1.7, fontFace: FT, bold: true, fontSize: fs(32), color: C.branco, valign: "top", fit: "shrink" });
     s.addText(txt(d.subtitulo), { x: MX, y: 5.0, w: 7.6, h: 0.4, fontFace: F, fontSize: fs(12), color: C.azulClaro });
     s.addShape("line", { x: 9.1, y: 0.9, w: 0, h: 5.4, line: { color: C.azul, width: 1 } });
     s.addText("NESTA AULA", { x: 9.4, y: 0.9, w: 3.5, h: 0.25, fontFace: FL, fontSize: fs(8), bold: true, color: C.azulClaro });
@@ -319,7 +319,7 @@ const L = {
   sintese(s, d) {
     s.addShape("rect", { x: 0, y: 0, w: 4.4, h: H, fill: { color: C.azulFundo }, line: { type: "none" } });
     s.addText(txt(d.olho || "Síntese").toUpperCase(), { x: MX, y: 1.6, w: 3.4, h: 0.3, fontFace: FL, fontSize: fs(10), bold: true, color: C.azul });
-    s.addText(txt(d.titulo || "O que levamos desta aula"), { x: MX, y: 1.95, w: 3.4, h: 1.3, fontFace: FT, fontSize: fs(24), color: C.texto, valign: "top", fit: "shrink" });
+    s.addText(txt(d.titulo || "O que levamos desta aula"), { x: MX, y: 1.95, w: 3.4, h: 1.3, fontFace: FT, bold: true, fontSize: fs(24), color: C.texto, valign: "top", fit: "shrink" });
     if (d.frase) s.addText(`“${txt(d.frase)}”`, { x: MX, y: 3.5, w: 3.3, h: 1.2, fontFace: F, fontSize: fs(12), italic: true, color: C.azul, valign: "top", fit: "shrink" });
     arr(d.itens).slice(0, 6).forEach((t, i) => {
       const y = 0.9 + i * 0.95;
