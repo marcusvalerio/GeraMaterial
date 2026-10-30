@@ -41,7 +41,7 @@ export const ETAPAS = {
   slides: {
     nome: "Slides da aula (PPTX)",
     instrucao: `Com base no PER e no Plano de Aula, crie a apresentação da aula (18 a 26 slides), no estilo editorial do SENAI:
-objetiva, organizada em BLOCOS de conteúdo, com exemplos reais do mundo do trabalho. PROIBIDO usar emojis em qualquer texto.
+objetiva, organizada em BLOCOS de conteúdo, com exemplos reais do mundo do trabalho. PROIBIDO usar emojis em qualquer texto. Use exatamente os nomes de campos em português indicados abaixo.
 Ícones: use SOMENTE nomes desta lista no campo "icone": ${ICONES.join(", ")}.
 Cada slide tem "olho" (rótulo curto acima do título, ex.: "BLOCO 1 · FUNDAMENTOS") e textos curtos. JSON:
 { "titulo": "", "rodape": "Curso | Unidade Curricular", "professor": "Professor(a) Nome", "slides": [ ... ] }
@@ -56,7 +56,7 @@ Layouts disponíveis ("layout") e seus campos:
 - "fluxo": { olho, titulo, passos: [ { titulo } ] (4 a 6), destaque: índice, esquerda: { rotulo: "EXEMPLO", titulo, texto }, direita: { rotulo: "ATENÇÃO", titulo, texto } }
 - "comparacao": { olho, titulo, esquerda: { rotulo, icone, titulo, itens, exemplo }, direita: { rotulo, icone, titulo, itens, exemplo } }
 - "lista": { olho, titulo, itens: [ { icone, titulo, texto } ] (3 a 5), nota }
-- "escala": { olho, titulo, texto, pontos: [ { rotulo, valor } ] (3: ideal, realista, limite), cards: [ { titulo, texto } ] (2), nota }
+- "escala": { olho, titulo, texto, pontos: [ { rotulo, valor } ] (3: ideal, realista, limite; valor = número ou até 3 palavras), cards: [ { titulo, texto } ] (2), nota }
 - "tabela": { olho, titulo, cabecalho: [...], linhas: [[...]] (até 8), alertas: ["erros comuns"] (opcional), nota }
 - "caso": { olho, titulo, rotulo: "SITUAÇÃO", situacao: "texto do caso", tempo: "20 min", perguntas: [3 a 5] }
 - "atividade": { olho, titulo, tempo, instrucoes: [...], entrega }

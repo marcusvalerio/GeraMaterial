@@ -237,15 +237,20 @@ const L = {
     s.addShape("line", { x: 1.6, y: 2.75, w: W - 3.2, h: 0, line: { color: C.borda, width: 2 } });
     pts.forEach((p, i) => {
       const cx = 1.6 + (i * (W - 3.2)) / Math.max(pts.length - 1, 1);
+      // Pontas alinhadas para dentro, para o texto não sair do slide.
+      const bw = 3.6, bx = Math.min(Math.max(cx - bw / 2, MX), W - MX - bw);
+      const al = i === 0 && pts.length > 1 ? "left" : i === pts.length - 1 && pts.length > 1 ? "right" : "center";
+      const valor = txt(p.valor), longo = valor.length > 14;
       s.addShape("ellipse", { x: cx - 0.17, y: 2.58, w: 0.34, h: 0.34, fill: { color: cores[i] }, line: { color: C.branco, width: 2 } });
-      s.addText(txt(p.rotulo), { x: cx - 1.5, y: 3.05, w: 3, h: 0.3, align: "center", fontFace: F, fontSize: fs(11), bold: true, color: C.texto });
-      s.addText(txt(p.valor), { x: cx - 1.5, y: 3.35, w: 3, h: 0.4, align: "center", fontFace: F, fontSize: fs(16), bold: true, color: cores[i] });
+      s.addText(txt(p.rotulo), { x: bx, y: 3.05, w: bw, h: 0.32, align: al, fontFace: F, fontSize: fs(11), bold: true, color: C.texto, fit: "shrink" });
+      s.addText(valor, { x: bx, y: 3.4, w: bw, h: longo ? 0.85 : 0.45, align: al, valign: "top", fontFace: F,
+        fontSize: longo ? fs(10) : fs(16), bold: !longo, color: longo ? C.cinza : cores[i], fit: "shrink" });
     });
     arr(d.cards).slice(0, 2).forEach((c, k) => {
       const x = MX + k * 6.17;
-      caixa(s, x, 4.15, 5.95, 1.7);
-      s.addText(txt(c.titulo), { x: x + 0.25, y: 4.35, w: 5.4, h: 0.3, fontFace: F, fontSize: fs(13), bold: true, color: C.texto });
-      s.addText(txt(c.texto), { x: x + 0.25, y: 4.7, w: 5.4, h: 1.05, fontFace: F, fontSize: fs(11), color: C.cinza, valign: "top", fit: "shrink" });
+      caixa(s, x, 4.4, 5.95, 1.5);
+      s.addText(txt(c.titulo), { x: x + 0.25, y: 4.58, w: 5.4, h: 0.3, fontFace: F, fontSize: fs(13), bold: true, color: C.texto });
+      s.addText(txt(c.texto), { x: x + 0.25, y: 4.93, w: 5.4, h: 0.9, fontFace: F, fontSize: fs(11), color: C.cinza, valign: "top", fit: "shrink" });
     });
     nota(s, d.nota, 6.1);
   },
@@ -396,8 +401,18 @@ const L = {
 Object.assign(L, { passos: L.jornada, topicos: L.lista, resumo: L.sintese, secao: L.abertura, exemplo: L.caso,
   destaque: L.conceito, encerramento: L.sintese });
 
+const SINONIMOS = { left: "esquerda", right: "direita", title: "titulo", subtitle: "subtitulo", items: "itens",
+  steps: "passos", icon: "icone", text: "texto", label: "rotulo", eyebrow: "olho", note: "nota" };
+function sinonimos(o) {
+  if (Array.isArray(o)) return o.map(sinonimos);
+  if (!o || typeof o !== "object") return o;
+  const r = {};
+  for (const [k, v] of Object.entries(o)) r[SINONIMOS[k] && !(SINONIMOS[k] in o) ? SINONIMOS[k] : k] = sinonimos(v);
+  return r;
+}
+
 function normalizar(m) {
-  if (Array.isArray(m.slides)) return m;
+  if (Array.isArray(m.slides)) return { ...m, slides: sinonimos(m.slides) };
   const slides = [{ layout: "capa", titulo: m.titulo, subtitulo: m.subtitulo }];
   for (const s of m.secoes || []) slides.push({ layout: "lista", titulo: s.titulo, itens: [...(s.paragrafos || []), ...(s.itens || [])] });
   return { ...m, slides };
