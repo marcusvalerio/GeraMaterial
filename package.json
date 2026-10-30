@@ -32,5 +32,8 @@
     "pptxgenjs": "^4.0.1",
     "unpdf": "^1.9.1"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  }
 }
