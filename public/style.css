@@ -185,3 +185,5 @@ input.invalido { border-color: var(--erro); box-shadow: 0 0 0 3px #c4283a1f; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+.nota-fonte { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--linha); font-size: .8rem; color: var(--tinta-3); line-height: 1.45; }
+.nota-fonte a { color: var(--azul); font-weight: 600; }
