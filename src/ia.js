@@ -42,21 +42,28 @@ export async function perguntar(system, usuario) {
   }
 
   const p = PROVEDORES[nome];
-  const r = await fetch(p.url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env[p.chave]}` },
-    body: JSON.stringify({
-      model: process.env.AI_MODEL || p.modelo,
-      temperature: 0.4,
-      response_format: { type: "json_object" },
-      messages: [{ role: "system", content: system }, { role: "user", content: usuario }],
-    }),
-  });
-  const j = await r.json().catch(() => ({}));
+  // IAs gratuitas às vezes respondem "ocupado" (503) ou "limite" (429): tenta de novo com espera crescente.
+  let r, j;
+  for (let tentativa = 0; tentativa < 4; tentativa++) {
+    r = await fetch(p.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env[p.chave]}` },
+      body: JSON.stringify({
+        model: process.env.AI_MODEL || p.modelo,
+        temperature: 0.4,
+        response_format: { type: "json_object" },
+        messages: [{ role: "system", content: system }, { role: "user", content: usuario }],
+      }),
+    });
+    j = await r.json().catch(() => ({}));
+    if (r.ok || ![429, 500, 503].includes(r.status)) break;
+    await new Promise((ok) => setTimeout(ok, 5000 * 2 ** tentativa));
+  }
   if (!r.ok) {
-    const msg = j.error?.message || JSON.stringify(j).slice(0, 300);
+    const erro = Array.isArray(j) ? j[0]?.error : j.error;
     if (r.status === 429) throw new Error(`Limite gratuito da IA atingido (${nome}). Aguarde um minuto e tente novamente.`);
-    throw new Error(`Erro da IA (${nome}): ${msg}`);
+    if (r.status === 503) throw new Error(`A IA (${nome}) está sobrecarregada no momento. Tente novamente em alguns minutos.`);
+    throw new Error(`Erro da IA (${nome}): ${erro?.message || JSON.stringify(j).slice(0, 300)}`);
   }
   return j.choices?.[0]?.message?.content || "";
 }
