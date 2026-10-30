@@ -2,7 +2,8 @@ import "dotenv/config";
 import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
-import Anthropic from "@anthropic-ai/sdk";
+import { extractText } from "unpdf";
+import { perguntar, provedorAtivo } from "./ia.js";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, contexto } from "./prompts.js";
@@ -11,7 +12,6 @@ import { gerarPER, gerarEP190 } from "./planilhas.js";
 import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, bancoAtivo } from "./db.js";
 
 const app = express();
-const client = new Anthropic(); // usa ANTHROPIC_API_KEY
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 const raiz = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,22 +25,18 @@ function extrairJson(texto) {
   return JSON.parse(texto.slice(ini, fim + 1));
 }
 
-// Converte os documentos de referência em blocos de conteúdo para a IA.
-async function blocosReferencia(arquivos) {
-  const blocos = [];
+// Extrai o texto dos documentos de referência (PDF, Word ou TXT).
+async function textoReferencias(arquivos) {
+  const partes = [];
   for (const f of arquivos || []) {
     const nome = f.originalname;
-    if (f.mimetype === "application/pdf" || nome.toLowerCase().endsWith(".pdf")) {
-      blocos.push({ type: "document", title: nome,
-        source: { type: "base64", media_type: "application/pdf", data: f.buffer.toString("base64") } });
-    } else if (nome.toLowerCase().endsWith(".docx")) {
-      const { value } = await mammoth.extractRawText({ buffer: f.buffer });
-      blocos.push({ type: "text", text: `DOCUMENTO DE REFERÊNCIA (${nome}):\n${value}` });
-    } else {
-      blocos.push({ type: "text", text: `DOCUMENTO DE REFERÊNCIA (${nome}):\n${f.buffer.toString("utf8")}` });
-    }
+    let texto;
+    if (nome.toLowerCase().endsWith(".pdf")) texto = (await extractText(new Uint8Array(f.buffer), { mergePages: true })).text;
+    else if (nome.toLowerCase().endsWith(".docx")) texto = (await mammoth.extractRawText({ buffer: f.buffer })).value;
+    else texto = f.buffer.toString("utf8");
+    partes.push(`DOCUMENTO DE REFERÊNCIA (${nome}):\n${texto.replace(/\n{3,}/g, "\n\n")}`);
   }
-  return blocos;
+  return partes.join("\n\n");
 }
 
 // Gera uma etapa da sequência. Recebe os dados, os documentos de referência e
@@ -55,27 +51,8 @@ app.post("/api/gerar/:etapa", upload.array("referencias"), async (req, res) => {
     const ctxAnteriores = ORDEM.filter((k) => anteriores[k])
       .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
 
-    const content = [
-      ...(await blocosReferencia(req.files)),
-      { type: "text", text: `${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}` },
-    ];
-
-    const resposta = await client.beta.messages
-      .stream({
-        model: "claude-opus-5-5",
-        max_tokens: 32000,
-        output_config: { effort: "medium" },
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        system: SISTEMA,
-        messages: [{ role: "user", content }],
-      })
-      .finalMessage();
-
-    if (resposta.stop_reason === "refusal") {
-      return res.status(422).json({ erro: "A solicitação foi recusada pela IA. Revise os dados informados." });
-    }
-    const texto = resposta.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+    const usuario = `${await textoReferencias(req.files)}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
+    const texto = await perguntar(SISTEMA, usuario);
     const resultado = extrairJson(texto);
     // Cria o registro da sequência na 1ª etapa e salva cada entrega no histórico.
     let sequenciaId = Number(req.body.sequenciaId) || null;
@@ -88,8 +65,7 @@ app.post("/api/gerar/:etapa", upload.array("referencias"), async (req, res) => {
     res.json({ sequenciaId, resultado });
   } catch (e) {
     console.error(e);
-    const status = e instanceof Anthropic.APIError ? e.status || 502 : 500;
-    res.status(status).json({ erro: e.message });
+    res.status(500).json({ erro: e.message });
   }
 });
 
@@ -132,6 +108,7 @@ app.delete("/api/sequencias/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/api/ia", (_req, res) => res.json({ provedor: provedorAtivo() }));
 app.get("/api/etapas", (_req, res) => res.json(ORDEM.map((k) => ({ id: k, nome: ETAPAS[k].nome }))));
 
 export default app;

@@ -10,7 +10,7 @@ Aplicação web que ajuda instrutores do SENAI a gerar materiais didáticos com 
 Exportação em **Word (.docx)**, **PDF** e **Slides (.pptx)**.
 
 ## Como rodar
-Requer Node.js 18+ e uma chave da API da Anthropic.
+Requer Node.js 18+ e uma chave de IA gratuita (Google Gemini, Groq ou OpenRouter — veja `.env.example`).
 
 ```bash
 npm install
