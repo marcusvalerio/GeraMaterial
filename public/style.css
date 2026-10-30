@@ -1,3 +1,5 @@
+@font-face { font-family: "Geist"; src: url("fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Geist Serif"; src: url("fonts/GeistSerif-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 :root {
   --azul: #0b4fa3; --azul-esc: #062b5c; --azul-claro: #e8f0fb;
   --vermelho: #e30613; --verde: #12a150; --amarelo: #f5a524;
@@ -94,3 +96,12 @@ input:focus, textarea:focus { outline: none; border-color: var(--azul); box-shad
   .menu { display: inline-block; border: 0; background: var(--card); box-shadow: var(--sombra); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
   .card { padding: 18px; }
 }
+
+/* Tipografia: títulos em Geist Serif, interface (botões, rótulos) em Geist, textos em Inter */
+.hero h1, h2, .etapa h3, .marca strong { font-family: "Geist Serif", Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+.hero h1 { font-size: clamp(1.6rem, 3vw, 2.4rem); }
+h2 { font-size: 1.25rem; }
+.etapa h3 { font-size: 1.05rem; }
+button, label, .rotulo, .trilha li, .formato, .num, .historico small, .busca, .upload strong { font-family: Geist, Inter, system-ui, sans-serif; }
+.dica { margin: 12px 0 0; font-size: .82rem; color: var(--suave); text-align: center; }
+.dica a { color: var(--azul); font-weight: 600; }

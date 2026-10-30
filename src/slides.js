@@ -12,7 +12,10 @@ const C = {
   texto: "0B1A2E", cinza: "5B6675", borda: "D9DEE5", branco: "FFFFFF", vermelho: "C8102E",
   vermelhoFundo: "FBECEE", verde: "1E8E3E",
 };
+// Tipografia: títulos em Geist Serif, texto em Inter, rótulos/números/rodapé em Geist (sans).
 const F = "Inter";
+const FT = "Geist Serif";
+const FL = "Geist";
 // Escala de fonte: todos os tamanhos passam por fs() (fácil ajustar num lugar só).
 const ESCALA = 1.25;
 const fs = (n) => Math.round(n * ESCALA);
@@ -58,14 +61,14 @@ function addIcone(s, nome, x, y, tam, cor = C.azul) {
 
 // ---------- Peças comuns ----------
 function olhoTitulo(s, olho, titulo) {
-  if (olho) s.addText(txt(olho).toUpperCase(), { x: MX, y: 0.38, w: W - 2 * MX, h: 0.28, fontFace: F, fontSize: fs(10), bold: true, color: C.azul, charSpacing: 1 });
-  s.addText(txt(titulo), { x: MX, y: 0.66, w: W - 2 * MX, h: 0.7, fontFace: F, fontSize: 30, bold: true, color: C.texto, valign: "middle", fit: "shrink" });
+  if (olho) s.addText(txt(olho).toUpperCase(), { x: MX, y: 0.38, w: W - 2 * MX, h: 0.28, fontFace: FL, fontSize: fs(10), bold: true, color: C.azul, charSpacing: 1 });
+  s.addText(txt(titulo), { x: MX, y: 0.66, w: W - 2 * MX, h: 0.75, fontFace: FT, fontSize: 34, color: C.texto, valign: "middle", fit: "shrink" });
 }
 function rodape(s, m, n, escuro = false) {
   const cor = escuro ? C.azulClaro : C.cinza;
-  s.addText(txt(m.rodape), { x: MX, y: H - 0.42, w: 6, h: 0.25, fontFace: F, fontSize: fs(8), color: cor });
-  s.addText(txt(m.professor), { x: 5.4, y: H - 0.42, w: 4, h: 0.25, fontFace: F, fontSize: fs(8), color: cor });
-  s.addText(String(n), { x: W - MX - 1, y: H - 0.42, w: 1, h: 0.25, fontFace: F, fontSize: fs(8), color: cor, align: "right" });
+  s.addText(txt(m.rodape), { x: MX, y: H - 0.42, w: 6, h: 0.25, fontFace: FL, fontSize: fs(8), color: cor });
+  s.addText(txt(m.professor), { x: 5.4, y: H - 0.42, w: 4, h: 0.25, fontFace: FL, fontSize: fs(8), color: cor });
+  s.addText(String(n), { x: W - MX - 1, y: H - 0.42, w: 1, h: 0.25, fontFace: FL, fontSize: fs(8), color: cor, align: "right" });
 }
 function caixa(s, x, y, w, h, { topo = C.azul, fundo = C.branco, borda = C.borda } = {}) {
   s.addShape("rect", { x, y, w, h, fill: { color: fundo }, line: { color: borda, width: 0.75 } });
@@ -76,7 +79,7 @@ function nota(s, texto, y = 6.45) {
   s.addText(txt(texto), { x: MX, y, w: W - 2 * MX, h: 0.45, fontFace: F, fontSize: fs(11), italic: true, color: C.azul, valign: "top", fit: "shrink" });
 }
 function rotulo(s, t, x, y, w, cor = C.azul) {
-  s.addText(txt(t).toUpperCase(), { x, y, w, h: 0.22, fontFace: F, fontSize: fs(8), bold: true, color: cor, charSpacing: 1 });
+  s.addText(txt(t).toUpperCase(), { x, y, w, h: 0.22, fontFace: FL, fontSize: fs(8), bold: true, color: cor, charSpacing: 1 });
 }
 
 // ---------- Layouts ----------
@@ -84,10 +87,10 @@ const L = {
   capa(s, d, m) {
     s.background = { color: C.fundo };
     s.addShape("rect", { x: 8.55, y: 0, w: W - 8.55, h: H, fill: { color: C.navy }, line: { type: "none" } });
-    s.addText(txt(d.olho || m.rodape).toUpperCase(), { x: MX, y: 0.55, w: 7.5, h: 0.3, fontFace: F, fontSize: fs(10), bold: true, color: C.azul, charSpacing: 1 });
+    s.addText(txt(d.olho || m.rodape).toUpperCase(), { x: MX, y: 0.55, w: 7.5, h: 0.3, fontFace: FL, fontSize: fs(10), bold: true, color: C.azul, charSpacing: 1 });
     s.addText(txt(d.contexto), { x: MX, y: 0.9, w: 7.5, h: 0.35, fontFace: F, fontSize: fs(13), color: C.cinza });
     if (d.modulo) s.addText(txt(d.modulo).toUpperCase(), { x: MX, y: 2.55, w: 7.5, h: 0.3, fontFace: F, fontSize: fs(11), bold: true, color: C.azul });
-    s.addText(txt(d.titulo), { x: MX, y: 2.9, w: 7.6, h: 1.8, fontFace: F, fontSize: fs(38), bold: true, color: C.texto, valign: "top", fit: "shrink" });
+    s.addText(txt(d.titulo), { x: MX, y: 2.9, w: 7.6, h: 1.8, fontFace: FT, fontSize: fs(38), color: C.texto, valign: "top", fit: "shrink" });
     s.addShape("line", { x: MX, y: 5.55, w: 7.4, h: 0, line: { color: C.navy, width: 1.5 } });
     s.addText(txt(d.professor || m.professor), { x: MX, y: 5.7, w: 7.5, h: 0.35, fontFace: F, fontSize: fs(14), bold: true, color: C.navy });
     s.addText(txt(d.subtitulo), { x: MX, y: 6.05, w: 7.5, h: 0.3, fontFace: F, fontSize: fs(10), color: C.cinza });
@@ -99,15 +102,15 @@ const L = {
   },
   abertura(s, d, m) {
     s.background = { color: C.navy };
-    s.addText(txt(d.olho || "Aula").toUpperCase(), { x: MX, y: 0.8, w: 5, h: 0.3, fontFace: F, fontSize: fs(10), bold: true, color: C.azulClaro });
-    s.addText(txt(d.numero), { x: MX, y: 1.1, w: 6, h: 1.8, fontFace: F, fontSize: fs(96), bold: true, color: C.branco });
-    s.addText(txt(d.titulo), { x: MX, y: 3.1, w: 7.6, h: 1.7, fontFace: F, fontSize: fs(32), bold: true, color: C.branco, valign: "top", fit: "shrink" });
+    s.addText(txt(d.olho || "Aula").toUpperCase(), { x: MX, y: 0.8, w: 5, h: 0.3, fontFace: FL, fontSize: fs(10), bold: true, color: C.azulClaro });
+    s.addText(txt(d.numero), { x: MX, y: 1.1, w: 6, h: 1.8, fontFace: FL, fontSize: fs(96), bold: true, color: C.branco });
+    s.addText(txt(d.titulo), { x: MX, y: 3.1, w: 7.6, h: 1.7, fontFace: FT, fontSize: fs(32), color: C.branco, valign: "top", fit: "shrink" });
     s.addText(txt(d.subtitulo), { x: MX, y: 5.0, w: 7.6, h: 0.4, fontFace: F, fontSize: fs(12), color: C.azulClaro });
     s.addShape("line", { x: 9.1, y: 0.9, w: 0, h: 5.4, line: { color: C.azul, width: 1 } });
-    s.addText("NESTA AULA", { x: 9.4, y: 0.9, w: 3.5, h: 0.25, fontFace: F, fontSize: fs(8), bold: true, color: C.azulClaro });
+    s.addText("NESTA AULA", { x: 9.4, y: 0.9, w: 3.5, h: 0.25, fontFace: FL, fontSize: fs(8), bold: true, color: C.azulClaro });
     arr(d.itens).slice(0, 6).forEach((t, i) => {
       const y = 1.35 + i * 0.75;
-      s.addText(num(i), { x: 9.4, y, w: 0.5, h: 0.5, fontFace: F, fontSize: fs(9), color: C.azulClaro, valign: "top" });
+      s.addText(num(i), { x: 9.4, y, w: 0.5, h: 0.5, fontFace: FL, fontSize: fs(9), color: C.azulClaro, valign: "top" });
       s.addText(txt(t), { x: 9.9, y, w: 3.0, h: 0.6, fontFace: F, fontSize: fs(11), color: C.branco, valign: "top", fit: "shrink" });
     });
   },
@@ -117,29 +120,38 @@ const L = {
     it.forEach((t, i) => {
       const col = i % 2, lin = Math.floor(i / 2);
       const x = MX + col * 6.2, y = 1.75 + lin * 1.45;
-      s.addText(num(i), { x, y, w: 0.8, h: 0.6, fontFace: F, fontSize: fs(22), bold: true, color: C.azul, valign: "top" });
+      s.addText(num(i), { x, y, w: 0.8, h: 0.6, fontFace: FL, fontSize: fs(22), bold: true, color: C.azul, valign: "top" });
       s.addText(txt(t), { x: x + 0.85, y: y + 0.05, w: 5.1, h: 1.1, fontFace: F, fontSize: fs(14), color: C.texto, valign: "top", fit: "shrink" });
     });
   },
   conceito(s, d) {
     olhoTitulo(s, d.olho, d.titulo);
-    s.addText(txt(d.texto), { x: MX, y: 1.45, w: W - 2 * MX, h: 0.8, fontFace: F, fontSize: fs(14), color: C.texto, valign: "top", fit: "shrink" });
+    const temEx = Boolean(d.exemplo);
+    s.addText(txt(d.texto), { x: MX, y: 1.5, w: W - 2 * MX, h: 0.95, fontFace: F, fontSize: fs(14), color: C.texto, valign: "top", fit: "shrink" });
     const cs = arr(d.cards).slice(0, 6);
-    const gap = 0.15, w = (W - 2 * MX - gap * (cs.length - 1)) / Math.max(cs.length, 1);
+    const gap = 0.2, w = (W - 2 * MX - gap * (cs.length - 1)) / Math.max(cs.length, 1);
+    const yC = 2.6, hC = temEx ? 2.05 : 3.4;
     cs.forEach((c, i) => {
       const x = MX + i * (w + gap);
-      caixa(s, x, 2.45, w, 1.55);
-      if (c.icone) addIcone(s, c.icone, x + 0.15, 2.65, 0.32);
-      s.addText(txt(c.titulo), { x: x + 0.15, y: c.icone ? 3.02 : 2.62, w: w - 0.3, h: 0.32, fontFace: F, fontSize: fs(13), bold: true, color: C.texto, fit: "shrink" });
-      s.addText(txt(c.texto), { x: x + 0.15, y: c.icone ? 3.35 : 2.98, w: w - 0.3, h: 0.6, fontFace: F, fontSize: fs(10), color: C.cinza, valign: "top", fit: "shrink" });
+      caixa(s, x, yC, w, hC);
+      let y = yC + 0.25;
+      if (c.icone) { addIcone(s, c.icone, x + 0.22, y, 0.38); y += 0.5; }
+      s.addText(txt(c.titulo), { x: x + 0.22, y, w: w - 0.44, h: 0.4, fontFace: F, fontSize: fs(13), bold: true, color: C.texto, valign: "top", fit: "shrink" });
+      s.addText(txt(c.texto), { x: x + 0.22, y: y + 0.42, w: w - 0.44, h: yC + hC - (y + 0.42) - 0.15, fontFace: F, fontSize: fs(10.5), color: C.cinza, valign: "top", fit: "shrink" });
     });
-    if (d.exemplo) {
-      caixa(s, MX, 4.35, W - 2 * MX, 1.6, { topo: C.navy });
-      rotulo(s, d.exemplo.rotulo || "Na rotina", MX + 0.25, 4.55, 5);
-      s.addText(txt(d.exemplo.titulo), { x: MX + 0.25, y: 4.8, w: W - 2 * MX - 0.5, h: 0.3, fontFace: F, fontSize: fs(13), bold: true, color: C.texto });
-      s.addText(txt(d.exemplo.texto), { x: MX + 0.25, y: 5.12, w: W - 2 * MX - 0.5, h: 0.75, fontFace: F, fontSize: fs(11), color: C.cinza, valign: "top", fit: "shrink" });
-    }
-    nota(s, d.nota);
+    if (temEx) {
+      caixa(s, MX, 4.9, W - 2 * MX, 1.55, { topo: C.navy });
+      rotulo(s, d.exemplo.rotulo || "Na rotina", MX + 0.3, 5.1, 5);
+      s.addText(txt(d.exemplo.titulo), { x: MX + 0.3, y: 5.36, w: W - 2 * MX - 0.6, h: 0.35, fontFace: F, fontSize: fs(13), bold: true, color: C.texto });
+      s.addText(txt(d.exemplo.texto), { x: MX + 0.3, y: 5.72, w: W - 2 * MX - 0.6, h: 0.65, fontFace: F, fontSize: fs(11), color: C.cinza, valign: "top", fit: "shrink" });
+    } else nota(s, d.nota);
+  },
+  referencias(s, d) {
+    olhoTitulo(s, d.olho || "Referências", d.titulo || "Fontes e bibliografia");
+    const refs = arr(d.itens).slice(0, 10);
+    caixa(s, MX, 1.7, W - 2 * MX, 4.95, { topo: C.navy });
+    s.addText(refs.map((t) => ({ text: txt(t).replace(/^fonte:\s*/i, ""), options: { paraSpaceAfter: 12, breakLine: true, bullet: { code: "25AA", color: C.azul } } })),
+      { x: MX + 0.35, y: 1.95, w: W - 2 * MX - 0.7, h: 4.5, fontFace: F, fontSize: fs(12), color: C.texto, valign: "top", fit: "shrink" });
   },
   cards(s, d) {
     olhoTitulo(s, d.olho, d.titulo);
@@ -151,7 +163,7 @@ const L = {
       if (escuro) s.addShape("rect", { x, y: 1.7, w, h: 3.6, fill: { color: C.azul }, line: { type: "none" } });
       else caixa(s, x, 1.7, w, 3.6);
       const corT = escuro ? C.branco : C.texto, corS = escuro ? "DCE8F8" : C.cinza;
-      s.addText(num(i), { x: x + 0.25, y: 1.95, w: 1, h: 0.25, fontFace: F, fontSize: fs(9), color: escuro ? C.azulClaro : C.azul });
+      s.addText(num(i), { x: x + 0.25, y: 1.95, w: 1, h: 0.25, fontFace: FL, fontSize: fs(9), color: escuro ? C.azulClaro : C.azul });
       if (c.icone) addIcone(s, c.icone, x + w - 0.75, 1.92, 0.45, escuro ? C.branco : C.azul);
       s.addText(txt(c.titulo), { x: x + 0.25, y: 2.35, w: w - 0.5, h: 0.5, fontFace: F, fontSize: fs(18), bold: true, color: corT, fit: "shrink" });
       s.addText(txt(c.texto), { x: x + 0.25, y: 2.9, w: w - 0.5, h: 1.2, fontFace: F, fontSize: fs(12), color: corS, valign: "top", fit: "shrink" });
@@ -167,7 +179,7 @@ const L = {
     ps.forEach((p, i) => {
       const x = MX + i * (w + gap), cx = x + w / 2 - 0.22;
       s.addShape("ellipse", { x: cx, y: 1.73, w: 0.44, h: 0.44, fill: { color: i === 0 ? C.azul : C.branco }, line: { color: C.azul, width: 1.25 } });
-      s.addText(String(i + 1), { x: cx, y: 1.73, w: 0.44, h: 0.44, align: "center", valign: "middle", fontFace: F, fontSize: fs(11), bold: true, color: i === 0 ? C.branco : C.azul });
+      s.addText(String(i + 1), { x: cx, y: 1.73, w: 0.44, h: 0.44, align: "center", valign: "middle", fontFace: FL, fontSize: fs(11), bold: true, color: i === 0 ? C.branco : C.azul });
       caixa(s, x, 2.5, w, 2.6);
       if (p.icone) addIcone(s, p.icone, x + 0.2, 2.7, 0.34);
       rotulo(s, p.rotulo, x + 0.2, p.icone ? 3.12 : 2.7, w - 0.4);
@@ -279,7 +291,7 @@ const L = {
     arr(d.perguntas).slice(0, 5).forEach((p, i) => {
       const y = 2.1 + i * 0.85;
       s.addShape("ellipse", { x: 6.6, y, w: 0.38, h: 0.38, fill: { color: C.azul }, line: { type: "none" } });
-      s.addText(String(i + 1), { x: 6.6, y, w: 0.38, h: 0.38, align: "center", valign: "middle", fontFace: F, fontSize: fs(10), bold: true, color: C.branco });
+      s.addText(String(i + 1), { x: 6.6, y, w: 0.38, h: 0.38, align: "center", valign: "middle", fontFace: FL, fontSize: fs(10), bold: true, color: C.branco });
       s.addText(semNum(p), { x: 7.15, y: y - 0.05, w: 5.55, h: 0.75, fontFace: F, fontSize: fs(12), color: C.texto, valign: "top", fit: "shrink" });
     });
   },
@@ -299,19 +311,19 @@ const L = {
     arr(d.itens).slice(0, 6).forEach((p, i) => {
       const y = 1.6 + i * 0.78;
       s.addShape("ellipse", { x: MX, y, w: 0.38, h: 0.38, fill: { color: C.azul }, line: { type: "none" } });
-      s.addText(String(i + 1), { x: MX, y, w: 0.38, h: 0.38, align: "center", valign: "middle", fontFace: F, fontSize: fs(10), bold: true, color: C.branco });
+      s.addText(String(i + 1), { x: MX, y, w: 0.38, h: 0.38, align: "center", valign: "middle", fontFace: FL, fontSize: fs(10), bold: true, color: C.branco });
       s.addText(semNum(p), { x: MX + 0.55, y: y - 0.05, w: W - 2 * MX - 0.6, h: 0.7, fontFace: F, fontSize: fs(13), color: C.texto, valign: "top", fit: "shrink" });
     });
     nota(s, d.nota);
   },
   sintese(s, d) {
     s.addShape("rect", { x: 0, y: 0, w: 4.4, h: H, fill: { color: C.azulFundo }, line: { type: "none" } });
-    s.addText(txt(d.olho || "Síntese").toUpperCase(), { x: MX, y: 1.6, w: 3.4, h: 0.3, fontFace: F, fontSize: fs(10), bold: true, color: C.azul });
-    s.addText(txt(d.titulo || "O que levamos desta aula"), { x: MX, y: 1.95, w: 3.4, h: 1.3, fontFace: F, fontSize: fs(24), bold: true, color: C.texto, valign: "top", fit: "shrink" });
+    s.addText(txt(d.olho || "Síntese").toUpperCase(), { x: MX, y: 1.6, w: 3.4, h: 0.3, fontFace: FL, fontSize: fs(10), bold: true, color: C.azul });
+    s.addText(txt(d.titulo || "O que levamos desta aula"), { x: MX, y: 1.95, w: 3.4, h: 1.3, fontFace: FT, fontSize: fs(24), color: C.texto, valign: "top", fit: "shrink" });
     if (d.frase) s.addText(`“${txt(d.frase)}”`, { x: MX, y: 3.5, w: 3.3, h: 1.2, fontFace: F, fontSize: fs(12), italic: true, color: C.azul, valign: "top", fit: "shrink" });
     arr(d.itens).slice(0, 6).forEach((t, i) => {
       const y = 0.9 + i * 0.95;
-      s.addText(num(i), { x: 4.9, y, w: 0.6, h: 0.5, fontFace: F, fontSize: fs(14), bold: true, color: C.azul, valign: "top" });
+      s.addText(num(i), { x: 4.9, y, w: 0.6, h: 0.5, fontFace: FL, fontSize: fs(14), bold: true, color: C.azul, valign: "top" });
       s.addText(txt(t), { x: 5.6, y, w: 7.1, h: 0.6, fontFace: F, fontSize: fs(13), color: C.texto, valign: "top", fit: "shrink" });
       if (i < 5) s.addShape("line", { x: 4.9, y: y + 0.78, w: 7.8, h: 0, line: { color: C.borda, width: 0.5 } });
     });
@@ -362,7 +374,7 @@ const L = {
       const a = -Math.PI / 2 + (2 * Math.PI * i) / n;
       const x = cx + R * Math.cos(a) - r, y = cy + R * Math.sin(a) - r;
       s.addShape("ellipse", { x, y, w: 2 * r, h: 2 * r, fill: { color: cores[i % 6] }, line: { color: C.fundo, width: 3 } });
-      s.addText(txt(p.sigla || String(i + 1)), { x, y, w: 2 * r, h: 2 * r, align: "center", valign: "middle", fontFace: F, fontSize: fs(18), bold: true, color: C.branco, fit: "shrink" });
+      s.addText(txt(p.sigla || String(i + 1)), { x, y, w: 2 * r, h: 2 * r, align: "center", valign: "middle", fontFace: FL, fontSize: fs(18), bold: true, color: C.branco, fit: "shrink" });
       const yl = 1.65 + i * (4.7 / n);
       s.addShape("rect", { x: 6.9, y: yl, w: 0.08, h: 4.7 / n - 0.15, fill: { color: cores[i % 6] }, line: { type: "none" } });
       s.addText([{ text: txt(p.titulo), options: { bold: true, color: C.texto, fontSize: fs(14), breakLine: true } },
@@ -419,8 +431,22 @@ function normalizar(m) {
   return { ...m, slides };
 }
 
+const PARECE_FONTE = /^\s*(fonte|fontes|refer[eê]ncia|bibliografia)\s*:|[A-ZÁÉÍÓÚ]{3,},\s+[A-Z][^.]*\.[^]*\b(19|20)\d{2}\b/i;
+function separarFontes(m) {
+  const refs = [...arr(m.referencias)];
+  for (const d of m.slides) {
+    if (d.nota && PARECE_FONTE.test(d.nota)) { refs.push(d.nota); delete d.nota; }
+  }
+  const unicas = [...new Set(refs.map((r) => txt(r).replace(/^fontes?:\s*/i, "")))].filter(Boolean);
+  const slides = m.slides.filter((d) => d.layout !== "referencias");
+  const existente = m.slides.find((d) => d.layout === "referencias");
+  const itens = [...new Set([...arr(existente?.itens), ...unicas])];
+  if (itens.length) slides.push({ layout: "referencias", olho: existente?.olho, titulo: existente?.titulo, itens });
+  return { ...m, slides };
+}
+
 export async function gerarSlides(m) {
-  m = normalizar(m);
+  m = separarFontes(normalizar(m));
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
   pptx.title = txt(m.titulo);

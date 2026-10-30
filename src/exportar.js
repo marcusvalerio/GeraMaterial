@@ -5,7 +5,11 @@ import {
 import PDFDocument from "pdfkit";
 import PptxGenJS from "pptxgenjs";
 
-const AZUL = "004A8D"; // azul institucional aproximado
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const AZUL = "002F6C"; // azul-marinho do padrão visual
+const FONTES = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "assets", "fonts");
 
 export async function gerarDocx(m) {
   const filhos = [new Paragraph({ text: m.titulo, heading: HeadingLevel.TITLE })];
@@ -26,7 +30,17 @@ export async function gerarDocx(m) {
       filhos.push(new Paragraph(""));
     }
   }
-  return Packer.toBuffer(new Document({ sections: [{ children: filhos }] }));
+  return Packer.toBuffer(new Document({
+    styles: {
+      default: { document: { run: { font: "Inter", size: 22 } } },
+      paragraphStyles: [
+        { id: "Title", name: "Title", basedOn: "Normal", run: { font: "Geist Serif", size: 44, color: AZUL } },
+        { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", run: { font: "Geist Serif", size: 30, color: AZUL },
+          paragraph: { spacing: { before: 280, after: 120 } } },
+      ],
+    },
+    sections: [{ children: filhos }],
+  }));
 }
 
 export function gerarPdf(m) {
@@ -36,16 +50,21 @@ export function gerarPdf(m) {
     doc.on("data", (b) => partes.push(b));
     doc.on("end", () => resolve(Buffer.concat(partes)));
     doc.on("error", reject);
+    // No PDF as fontes vão embutidas: o visual fica certo mesmo sem instalar nada.
+    doc.registerFont("Titulo", path.join(FONTES, "GeistSerif-Regular.ttf"));
+    doc.registerFont("Rotulo", path.join(FONTES, "Geist-SemiBold.ttf"));
+    doc.registerFont("Texto", path.join(FONTES, "Inter-Regular.otf"));
+    doc.registerFont("TextoNegrito", path.join(FONTES, "Inter-Bold.otf"));
 
-    doc.fillColor(`#${AZUL}`).fontSize(18).font("Helvetica-Bold").text(m.titulo).moveDown();
+    doc.fillColor(`#${AZUL}`).fontSize(18).font("Titulo").text(m.titulo).moveDown();
     for (const s of m.secoes || []) {
-      doc.fillColor(`#${AZUL}`).fontSize(13).font("Helvetica-Bold").text(s.titulo).moveDown(0.3);
-      doc.fillColor("black").fontSize(10.5).font("Helvetica");
+      doc.fillColor(`#${AZUL}`).fontSize(14).font("Titulo").text(s.titulo).moveDown(0.3);
+      doc.fillColor("black").fontSize(10.5).font("Texto");
       for (const p of s.paragrafos || []) doc.text(p, { align: "justify" }).moveDown(0.4);
       for (const i of s.itens || []) doc.text(`•  ${i}`, { indent: 10 }).moveDown(0.15);
       if (s.tabela?.cabecalho?.length) {
-        doc.moveDown(0.3).font("Helvetica-Bold").text(s.tabela.cabecalho.join("  |  "));
-        doc.font("Helvetica");
+        doc.moveDown(0.3).font("TextoNegrito").text(s.tabela.cabecalho.join("  |  "));
+        doc.font("Texto");
         for (const l of s.tabela.linhas || []) {
           doc.text(l.join("  |  ")).moveDown(0.2);
         }

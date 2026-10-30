@@ -71,7 +71,9 @@ Layouts disponíveis ("layout") e seus campos:
    serie: "nome da série", categorias: [...], valores: [números], texto: "leitura/interpretação do gráfico", nota }
 REGRA: sempre que o conteúdo tiver uma ferramenta ou conceito visual (Ishikawa, PDCA, Pareto, histograma, fluxograma, gráfico),
 MOSTRE o desenho com o layout correspondente (ishikawa, ciclo, grafico, fluxo), além de explicá-lo.
-- "sintese" (último): { olho: "SÍNTESE", titulo: "O que levamos desta aula", frase: "frase de impacto", itens: [4 a 6] }`,
+- "referencias" (SEMPRE o último slide): { titulo: "Fontes e bibliografia", itens: ["SOBRENOME, Nome. Título. Editora, ano."] }
+   As fontes/bibliografia vão SOMENTE neste slide final — nunca no campo "nota" dos outros slides.
+- "sintese" (penúltimo): { olho: "SÍNTESE", titulo: "O que levamos desta aula", frase: "frase de impacto", itens: [4 a 6] }`,
   },
   avaliacao: {
     nome: "Avaliações (30 e 60 pontos)",
