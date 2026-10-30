@@ -1,7 +1,6 @@
 // Gera a apresentação (PPTX) no padrão visual do modelo do professor:
 // fundo off-white, azul-marinho, Arial, cards com faixa azul no topo, "olho" (rótulo) acima do título,
 // rodapé com curso | UC e nome do professor. Ícones vetoriais (Lucide) — nunca emojis.
-import PptxGenJS from "pptxgenjs";
 import { Resvg } from "@resvg/resvg-js";
 import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -28,6 +27,8 @@ const num = (i) => String(i + 1).padStart(2, "0");
 
 // ---------- Ícones (Lucide → PNG) ----------
 const require = createRequire(import.meta.url);
+// Carrega a versão CommonJS do pptxgenjs (a versão ESM quebra no empacotamento da Vercel).
+const PptxGenJS = require("pptxgenjs");
 const PASTA_ICONES = path.join(path.dirname(require.resolve("lucide-static/package.json")), "icons");
 export const ICONES = [
   "target", "lightbulb", "users", "user", "handshake", "message-circle", "messages-square", "clipboard-list",

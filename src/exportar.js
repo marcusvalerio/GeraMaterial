@@ -1,9 +1,8 @@
-// Converte o material (JSON genérico: titulo + secoes) em DOCX, PDF e PPTX.
+// Converte o material (JSON genérico: titulo + secoes) em DOCX e PDF. Slides ficam em slides.js.
 import {
   Document, Packer, Paragraph, HeadingLevel, TextRun, Table, TableRow, TableCell, WidthType,
 } from "docx";
 import PDFDocument from "pdfkit";
-import PptxGenJS from "pptxgenjs";
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -72,35 +71,4 @@ export function gerarPdf(m) {
     }
     doc.end();
   });
-}
-
-export async function gerarPptx(m) {
-  const pptx = new PptxGenJS();
-  pptx.layout = "LAYOUT_WIDE";
-  const capa = pptx.addSlide();
-  capa.background = { color: AZUL };
-  capa.addText(m.titulo, { x: 0.6, y: 2.6, w: 12, h: 1.5, fontSize: 36, bold: true, color: "FFFFFF" });
-
-  for (const s of m.secoes || []) {
-    const blocos = [...(s.paragrafos || []), ...(s.itens || [])];
-    // Divide conteúdo longo em vários slides (6 blocos por slide).
-    const grupos = [];
-    for (let i = 0; i < blocos.length; i += 6) grupos.push(blocos.slice(i, i + 6));
-    if (!grupos.length && !s.tabela) grupos.push([]);
-    grupos.forEach((g, idx) => {
-      const sl = pptx.addSlide();
-      sl.addText(s.titulo + (grupos.length > 1 ? ` (${idx + 1}/${grupos.length})` : ""),
-        { x: 0.5, y: 0.3, w: 12.3, h: 0.8, fontSize: 26, bold: true, color: AZUL });
-      sl.addText(g.map((t) => ({ text: t, options: { bullet: true } })),
-        { x: 0.6, y: 1.3, w: 12.1, h: 5.8, fontSize: 18, valign: "top" });
-    });
-    if (s.tabela?.cabecalho?.length) {
-      const sl = pptx.addSlide();
-      sl.addText(s.titulo, { x: 0.5, y: 0.3, w: 12.3, h: 0.8, fontSize: 26, bold: true, color: AZUL });
-      const cab = s.tabela.cabecalho.map((c) => ({ text: String(c), options: { bold: true, color: "FFFFFF", fill: { color: AZUL } } }));
-      const linhas = (s.tabela.linhas || []).map((l) => l.map((c) => ({ text: String(c ?? "") })));
-      sl.addTable([cab, ...linhas], { x: 0.5, y: 1.3, w: 12.3, fontSize: 12, border: { color: "999999", pt: 0.5 }, autoPage: true });
-    }
-  }
-  return pptx.write({ outputType: "nodebuffer" });
 }
