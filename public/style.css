@@ -1,0 +1,23 @@
+:root { --azul: #004a8d; --vermelho: #e30613; --fundo: #f4f6f9; --texto: #1c1c1c; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--fundo); color: var(--texto); }
+header { background: var(--azul); color: #fff; padding: 20px 16px; }
+header h1 { margin: 0; font-size: 1.6rem; }
+header h1 span { color: #fff; background: var(--vermelho); padding: 0 8px; border-radius: 4px; }
+header p { margin: 6px 0 0; opacity: .85; }
+main { max-width: 960px; margin: 0 auto; padding: 16px; }
+form, #resultado { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px #0002; margin-bottom: 20px; }
+fieldset { border: 1px solid #ccd; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
+label { display: block; font-weight: 600; margin-bottom: 12px; }
+fieldset label { font-weight: 400; margin: 0; }
+input:not([type=radio]), textarea { width: 100%; padding: 8px; border: 1px solid #bbc; border-radius: 6px; font: inherit; font-weight: 400; margin-top: 4px; }
+.grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 16px; }
+button { background: var(--azul); color: #fff; border: 0; padding: 10px 18px; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+.acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+#status { color: var(--azul); }
+#previa h2 { color: var(--azul); }
+#previa h3 { color: var(--azul); border-bottom: 2px solid var(--vermelho); padding-bottom: 4px; }
+#previa table { border-collapse: collapse; width: 100%; font-size: .9rem; display: block; overflow-x: auto; }
+#previa th, #previa td { border: 1px solid #ccd; padding: 6px; text-align: left; vertical-align: top; }
+#previa th { background: var(--azul); color: #fff; }

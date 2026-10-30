@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GeraMaterial SENAI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><h1>GeraMaterial <span>SENAI</span></h1><p>Gerador de materiais didáticos para instrutores (MSEP)</p></header>
+<main>
+  <form id="form">
+    <fieldset>
+      <legend>Tipo de material</legend>
+      <label><input type="radio" name="tipo" value="plano" checked> Plano de Aula</label>
+      <label><input type="radio" name="tipo" value="situacao"> Situação de Aprendizagem</label>
+      <label><input type="radio" name="tipo" value="avaliacao"> Avaliação e Gabarito</label>
+    </fieldset>
+    <div class="grade">
+      <label>Curso <input name="curso" required placeholder="Ex.: Técnico em Eletrotécnica"></label>
+      <label>Unidade Curricular <input name="uc" required placeholder="Ex.: Instalações Elétricas Prediais"></label>
+      <label>Tema da aula <input name="tema" required placeholder="Ex.: Dimensionamento de condutores"></label>
+      <label>Carga horária <input name="cargaHoraria" placeholder="Ex.: 4 horas"></label>
+    </div>
+    <label>Capacidades técnicas <textarea name="capacidadesTecnicas" rows="3" placeholder="Cole as capacidades do plano de curso"></textarea></label>
+    <label>Capacidades socioemocionais <textarea name="capacidadesSocio" rows="2"></textarea></label>
+    <label>Conhecimentos <textarea name="conhecimentos" rows="3"></textarea></label>
+    <div class="grade">
+      <label>Perfil da turma <input name="perfilTurma" placeholder="Ex.: 30 alunos, noturno, iniciantes"></label>
+      <label>Recursos / ambiente <input name="recursos" placeholder="Ex.: laboratório, bancadas, multímetros"></label>
+    </div>
+    <label>Observações <textarea name="observacoes" rows="2" placeholder="Qualquer orientação extra (nº de questões, estratégia preferida...)"></textarea></label>
+    <button type="submit" id="btnGerar">Gerar material</button>
+    <p id="status"></p>
+  </form>
+
+  <section id="resultado" hidden>
+    <div class="acoes">
+      <button data-fmt="docx">Baixar Word</button>
+      <button data-fmt="pdf">Baixar PDF</button>
+      <button data-fmt="pptx">Baixar Slides</button>
+    </div>
+    <article id="previa"></article>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
