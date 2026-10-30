@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const PROVEDORES = {
   gemini: { chave: "GEMINI_API_KEY", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    modelo: "gemini-2.5-flash" },
+    modelo: "gemini-flash-latest" },
   groq: { chave: "GROQ_API_KEY", url: "https://api.groq.com/openai/v1/chat/completions",
     modelo: "llama-3.3-70b-versatile" },
   openrouter: { chave: "OPENROUTER_API_KEY", url: "https://openrouter.ai/api/v1/chat/completions",
