@@ -19,6 +19,7 @@ const fs = (n) => Math.round(n * ESCALA);
 const W = 13.333, H = 7.5, MX = 0.6;
 
 const txt = (v) => String(v ?? "").replace(/\p{Extended_Pictographic}️?/gu, "").trim();
+const semNum = (v) => txt(v).replace(/^\d+\s*[.)\-–]\s*/, "");
 const arr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 const num = (i) => String(i + 1).padStart(2, "0");
 
@@ -257,7 +258,7 @@ const L = {
   tabela(s, d) {
     olhoTitulo(s, d.olho, d.titulo);
     const cab = arr(d.cabecalho).map((c) => ({ text: txt(c), options: { bold: true, color: C.branco, fill: { color: C.navy } } }));
-    const linhas = arr(d.linhas).slice(0, 8).map((l) => arr(l).map((c, j) => ({ text: txt(c), options: { bold: j === 0, color: C.texto } })));
+    const linhas = arr(d.linhas).slice(0, d.alertas ? 5 : 8).map((l) => arr(l).map((c, j) => ({ text: txt(c), options: { bold: j === 0, color: C.texto } })));
     s.addTable([cab, ...linhas], { x: MX, y: 1.6, w: W - 2 * MX, fontFace: F, fontSize: fs(11), border: { type: "solid", color: C.borda, pt: 0.75 },
       fill: { color: C.branco }, valign: "middle", margin: 0.08, autoPage: false });
     if (d.alertas) {
@@ -279,14 +280,14 @@ const L = {
       const y = 2.1 + i * 0.85;
       s.addShape("ellipse", { x: 6.6, y, w: 0.38, h: 0.38, fill: { color: C.azul }, line: { type: "none" } });
       s.addText(String(i + 1), { x: 6.6, y, w: 0.38, h: 0.38, align: "center", valign: "middle", fontFace: F, fontSize: fs(10), bold: true, color: C.branco });
-      s.addText(txt(p), { x: 7.15, y: y - 0.05, w: 5.55, h: 0.75, fontFace: F, fontSize: fs(12), color: C.texto, valign: "top", fit: "shrink" });
+      s.addText(semNum(p), { x: 7.15, y: y - 0.05, w: 5.55, h: 0.75, fontFace: F, fontSize: fs(12), color: C.texto, valign: "top", fit: "shrink" });
     });
   },
   atividade(s, d) {
     olhoTitulo(s, d.olho || (d.tempo ? `Atividade · ${d.tempo}` : "Atividade"), d.titulo);
     caixa(s, MX, 1.7, 7.6, 4.6);
     rotulo(s, "Passo a passo", MX + 0.3, 1.95, 5);
-    s.addText(arr(d.instrucoes).slice(0, 7).map((t) => ({ text: txt(t), options: { bullet: { type: "number" }, paraSpaceAfter: 8 } })),
+    s.addText(arr(d.instrucoes).slice(0, 7).map((t) => ({ text: semNum(t), options: { bullet: { type: "number" }, paraSpaceAfter: 8 } })),
       { x: MX + 0.3, y: 2.3, w: 7.0, h: 3.85, fontFace: F, fontSize: fs(13), color: C.texto, valign: "top", fit: "shrink" });
     s.addShape("rect", { x: 8.45, y: 1.7, w: W - MX - 8.45, h: 4.6, fill: { color: C.azulFundo }, line: { type: "none" } });
     addIcone(s, "clipboard-check", 8.75, 1.95, 0.45);
@@ -299,7 +300,7 @@ const L = {
       const y = 1.6 + i * 0.78;
       s.addShape("ellipse", { x: MX, y, w: 0.38, h: 0.38, fill: { color: C.azul }, line: { type: "none" } });
       s.addText(String(i + 1), { x: MX, y, w: 0.38, h: 0.38, align: "center", valign: "middle", fontFace: F, fontSize: fs(10), bold: true, color: C.branco });
-      s.addText(txt(p), { x: MX + 0.55, y: y - 0.05, w: W - 2 * MX - 0.6, h: 0.7, fontFace: F, fontSize: fs(13), color: C.texto, valign: "top", fit: "shrink" });
+      s.addText(semNum(p), { x: MX + 0.55, y: y - 0.05, w: W - 2 * MX - 0.6, h: 0.7, fontFace: F, fontSize: fs(13), color: C.texto, valign: "top", fit: "shrink" });
     });
     nota(s, d.nota);
   },
