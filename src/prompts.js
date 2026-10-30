@@ -61,6 +61,13 @@ Layouts disponíveis ("layout") e seus campos:
 - "caso": { olho, titulo, rotulo: "SITUAÇÃO", situacao: "texto do caso", tempo: "20 min", perguntas: [3 a 5] }
 - "atividade": { olho, titulo, tempo, instrucoes: [...], entrega }
 - "questoes": { olho, titulo, itens: [perguntas de fixação], nota }
+- "ishikawa" (DESENHO do diagrama espinha de peixe — use sempre que a aula falar de Ishikawa/causa e efeito):
+   { olho, titulo, efeito: "problema", categorias: [ { nome: "Máquina", causas: [até 3 causas curtas] } ] (6 categorias: 6M), nota }
+- "ciclo" (DESENHO de ciclo — PDCA, ciclo de vida, melhoria contínua): { olho, titulo, centro: "PDCA", etapas: [ { sigla: "P", titulo, texto } ] (3 a 6) }
+- "grafico" (GRÁFICO real — Pareto, comparação de valores, indicadores): { olho, titulo, tipo: "pareto" | "colunas" | "horizontal",
+   serie: "nome da série", categorias: [...], valores: [números], texto: "leitura/interpretação do gráfico", nota }
+REGRA: sempre que o conteúdo tiver uma ferramenta ou conceito visual (Ishikawa, PDCA, Pareto, histograma, fluxograma, gráfico),
+MOSTRE o desenho com o layout correspondente (ishikawa, ciclo, grafico, fluxo), além de explicá-lo.
 - "sintese" (último): { olho: "SÍNTESE", titulo: "O que levamos desta aula", frase: "frase de impacto", itens: [4 a 6] }`,
   },
   avaliacao: {
