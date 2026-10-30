@@ -5,78 +5,95 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GeraMaterial SENAI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app">
-  <aside class="lateral" id="lateral">
-    <div class="marca">
-      <div class="logo">GM</div>
-      <div><strong>GeraMaterial</strong><small>SENAI · MSEP</small></div>
-    </div>
-    <button class="btn-novo" id="btnNovo">+ Nova sequência</button>
-    <input class="busca" id="busca" placeholder="Buscar curso, UC, turma…">
-    <p class="rotulo">Histórico</p>
-    <ul class="historico" id="historico"></ul>
-  </aside>
+<header class="topo">
+  <a class="marca" href="./" aria-label="GeraMaterial, início">
+    <span class="selo" aria-hidden="true">GM</span>
+    <span>GeraMaterial <small>SENAI</small></span>
+  </a>
+  <div class="topo-acoes">
+    <a class="link-fontes" href="fontes-geramaterial.zip" download>Baixar fonte Inter</a>
+    <button class="btn-materiais" id="btnMenu" type="button" aria-controls="lateral" aria-expanded="false">Meus materiais</button>
+  </div>
+</header>
 
-  <main class="conteudo">
-    <button class="menu" id="btnMenu" aria-label="Abrir histórico">☰</button>
+<aside class="gaveta" id="lateral" aria-label="Meus materiais">
+  <div class="gaveta-topo">
+    <h2>Meus materiais</h2>
+    <button class="fechar" id="btnFechar" type="button" aria-label="Fechar">✕</button>
+  </div>
+  <button class="btn-novo" id="btnNovo" type="button">Começar nova sequência</button>
+  <input class="busca" id="busca" type="search" placeholder="Buscar por curso, UC ou turma" aria-label="Buscar materiais">
+  <ul class="historico" id="historico"></ul>
+</aside>
+<div class="veu" id="veu" hidden></div>
 
-    <section class="hero">
-      <h1>Gere a sequência completa da sua UC</h1>
-      <p>Envie o documento de referência, informe a turma e o sistema entrega, em ordem, tudo o que você precisa.</p>
-      <ol class="trilha">
-        <li><span>1</span>PER</li><li><span>2</span>Plano de Aula</li><li><span>3</span>Slides</li>
-        <li><span>4</span>Avaliações 30/60</li><li><span>5</span>Atividades</li>
-      </ol>
-    </section>
+<main class="palco">
+  <section class="abertura">
+    <h1>Do plano de curso à aula pronta.</h1>
+    <p>Envie o plano de curso, conte sobre a turma e receba os cinco materiais da sequência SENAI, um depois do outro, já nos modelos oficiais.</p>
+  </section>
 
-    <div class="colunas">
-      <form id="form" class="card">
-        <div class="bloco">
-          <h2><span class="num">A</span> Base</h2>
-          <label class="upload" id="upload">
-            <input type="file" name="referencias" id="arquivos" multiple accept=".pdf,.docx,.txt">
-            <div class="upload-ico">⬆</div>
-            <div><strong>Documento de referência</strong><small>Plano de curso, ementa… (PDF, Word ou TXT)</small></div>
-          </label>
-          <ul class="arquivos" id="listaArquivos"></ul>
-        </div>
-
-        <div class="bloco">
-          <h2><span class="num">B</span> Turma</h2>
-          <div class="grade">
-            <label>Curso<input name="curso" required placeholder="Assistente de Controle de Qualidade"></label>
-            <label>Unidade Curricular<input name="uc" required placeholder="Ferramentas da Qualidade"></label>
-            <label>Turma<input name="turma"></label>
-            <label>Modalidade<input name="modalidade" placeholder="Qualificação, Técnico…"></label>
-            <label>Início da UC<input name="dataInicio" placeholder="dd/mm/aaaa"></label>
-            <label>Término da UC<input name="dataTermino" placeholder="dd/mm/aaaa"></label>
-            <label>Dias / horário<input name="dias" placeholder="seg a qui, 19h–22h"></label>
-            <label>Instrutor(a)<input name="instrutor"></label>
-            <label>Segmento<input name="segmento" placeholder="GESTÃO"></label>
-            <label>Tema da situação de aprendizagem<input name="tema"></label>
-          </div>
-          <label>Recursos / ambiente<input name="recursos" placeholder="Laboratório, computadores, post-it…"></label>
-          <label>Observações<textarea name="observacoes" rows="2"></textarea></label>
-        </div>
-
-        <button type="submit" class="btn-gerar" id="btnGerar">Gerar sequência completa</button>
-        <p class="dica">Primeira vez? <a href="fontes-geramaterial.zip" download>Baixe e instale as fontes</a> (Inter) para os slides e documentos abrirem com o visual correto.</p>
-      </form>
-
-      <section class="card resultado">
-        <div class="resultado-topo">
-          <h2>Entregas</h2>
-          <div class="progresso"><div id="barra"></div></div>
-        </div>
-        <ol class="etapas" id="etapas"></ol>
+  <div class="mesa">
+    <form id="form" class="roteiro" novalidate>
+      <section class="passo" id="passo1">
+        <div class="passo-cab"><span class="passo-n">1</span><h2>Plano de curso</h2></div>
+        <p class="passo-ajuda">É a base de tudo: dele saem as capacidades, os conhecimentos e a carga horária.</p>
+        <label class="soltar" id="upload">
+          <input type="file" name="referencias" id="arquivos" multiple accept=".pdf,.docx,.txt">
+          <span class="soltar-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6"/><path d="m9.5 13.5 2.5-2.5 2.5 2.5"/></svg>
+          </span>
+          <span class="soltar-txt"><strong>Arraste o arquivo aqui</strong> ou clique para escolher<small>PDF, Word ou TXT</small></span>
+        </label>
+        <ul class="arquivos" id="listaArquivos"></ul>
       </section>
-    </div>
-  </main>
-</div>
+
+      <section class="passo" id="passo2">
+        <div class="passo-cab"><span class="passo-n">2</span><h2>Turma</h2></div>
+        <p class="passo-ajuda">Só os três primeiros campos são obrigatórios. O resto deixa o material mais certeiro.</p>
+        <div class="grade">
+          <label>Curso<input name="curso" required placeholder="Assistente de Operações em Logística"></label>
+          <label>Unidade curricular<input name="uc" required placeholder="Logística de Armazenagem"></label>
+          <label class="larga">Instrutor(a)<input name="instrutor" required placeholder="Seu nome como vai aparecer nos slides"></label>
+        </div>
+        <details class="mais">
+          <summary>Mais detalhes da turma</summary>
+          <div class="grade">
+            <label>Turma<input name="turma" placeholder="QUA0250.02"></label>
+            <label>Modalidade<input name="modalidade" placeholder="Qualificação profissional"></label>
+            <label>Início da UC<input name="dataInicio" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+            <label>Término da UC<input name="dataTermino" placeholder="dd/mm/aaaa" inputmode="numeric"></label>
+            <label>Dias e horário<input name="dias" placeholder="Seg a sex, 18h às 22h"></label>
+            <label>Segmento<input name="segmento" placeholder="Logística"></label>
+            <label class="larga">Tema da situação de aprendizagem<input name="tema" placeholder="Armazenagem e curva ABC"></label>
+            <label class="larga">Recursos e ambiente<input name="recursos" placeholder="Laboratório, paleteira, computadores"></label>
+            <label class="larga">Observações<textarea name="observacoes" rows="2" placeholder="Algo que a IA precisa saber sobre a turma"></textarea></label>
+          </div>
+        </details>
+      </section>
+
+      <section class="passo" id="passo3">
+        <div class="passo-cab"><span class="passo-n">3</span><h2>Gerar</h2></div>
+        <p class="passo-ajuda">Leva de 5 a 15 minutos. Pode baixar cada material assim que ele ficar pronto.</p>
+        <button type="submit" class="btn-gerar" id="btnGerar">Gerar os cinco materiais</button>
+        <p class="aviso" id="aviso" role="status"></p>
+      </section>
+    </form>
+
+    <section class="pilha" aria-labelledby="tituloPilha">
+      <div class="pilha-cab">
+        <h2 id="tituloPilha">Sua sequência</h2>
+        <span class="contagem" id="contagem">0 de 5</span>
+      </div>
+      <div class="progresso" aria-hidden="true"><div id="barra"></div></div>
+      <ol class="folhas" id="etapas"></ol>
+    </section>
+  </div>
+</main>
 <script src="app.js"></script>
 </body>
 </html>
