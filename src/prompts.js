@@ -94,8 +94,9 @@ export const ORDEM = ["per", "plano", "slides", "avaliacao", "atividade"];
 
 export function contexto(d) {
   return `Dados informados pelo instrutor:
-- Curso: ${d.curso || "-"}
-- Unidade Curricular (UC): ${d.uc || "-"}
+- Curso: ${d.curso || "-"}${d.cargaHorariaCurso ? ` (${d.cargaHorariaCurso})` : ""}
+- Unidade Curricular (UC): ${d.uc || "-"}${d.cargaHorariaUC ? ` — carga horária ${d.cargaHorariaUC}` : ""}${d.modulo ? ` — módulo ${d.modulo}` : ""}
+- Gere o material SOMENTE para esta unidade curricular; use do documento apenas a parte dela.
 - Turma: ${d.turma || "-"} | Modalidade: ${d.modalidade || "-"}
 - Datas da UC: ${d.dataInicio || "-"} a ${d.dataTermino || "-"} | Dias/horário: ${d.dias || "-"}
 - Instrutor: ${d.instrutor || "-"} | Segmento: ${d.segmento || "-"}
@@ -103,3 +104,12 @@ export function contexto(d) {
 - Recursos/ambiente: ${d.recursos || "-"}
 - Observações: ${d.observacoes || "-"}`;
 }
+
+// Leitura do plano de curso: identifica o curso e todas as unidades curriculares.
+export const ANALISE = `Leia o DOCUMENTO DE REFERÊNCIA (plano de curso SENAI) e identifique o curso e TODAS as unidades curriculares (UCs).
+Copie nomes e cargas horárias exatamente como estão no documento, sem inventar. Ignore índices, sumários e itinerários repetidos:
+cada UC deve aparecer uma única vez, na ordem do curso. JSON:
+{ "curso": "nome do curso", "cargaHoraria": "200h", "modalidade": "Qualificação Profissional", "eixo": "",
+  "competenciaGeral": "texto da competência geral",
+  "ucs": [ { "nome": "Fundamentos de Logística", "cargaHoraria": "20h", "modulo": "Básico", "objetivo": "objetivo geral da UC (resumido)" } ] }
+Se o documento não for um plano de curso, devolva { "curso": "", "ucs": [] }.`;

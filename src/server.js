@@ -6,7 +6,7 @@ import { extractText } from "unpdf";
 import { perguntar, provedorAtivo } from "./ia.js";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { SISTEMA, ETAPAS, ORDEM, contexto } from "./prompts.js";
+import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto } from "./prompts.js";
 import { gerarDocx, gerarPdf } from "./exportar.js";
 import { gerarSlides } from "./slides.js";
 import { gerarPER, gerarEP190 } from "./planilhas.js";
@@ -39,6 +39,30 @@ async function textoReferencias(arquivos) {
   }
   return partes.join("\n\n");
 }
+
+// Lê o plano de curso enviado e devolve o curso e a lista de unidades curriculares.
+app.post("/api/analisar", upload.array("referencias"), async (req, res) => {
+  try {
+    if (!req.files?.length) return res.status(400).json({ erro: "Envie o plano de curso para identificar as unidades curriculares." });
+    const texto = await textoReferencias(req.files);
+    if (texto.replace(/DOCUMENTO DE REFERÊNCIA \([^)]*\):/g, "").trim().length < 200) {
+      return res.status(422).json({ erro: "Não foi possível ler o texto do arquivo. Se for um PDF escaneado (imagem), envie a versão em Word ou um PDF com texto." });
+    }
+    const r = extrairJson(await perguntar(SISTEMA, `${texto}\n\nTAREFA: ${ANALISE}`));
+    // Remove UCs repetidas (o plano costuma listar as UCs mais de uma vez).
+    const vistas = new Set();
+    r.ucs = (r.ucs || []).filter((u) => {
+      const k = String(u.nome || "").trim().toLowerCase();
+      if (!k || vistas.has(k)) return false;
+      vistas.add(k);
+      return true;
+    });
+    res.json(r);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ erro: e.message });
+  }
+});
 
 // Gera uma etapa da sequência. Recebe os dados, os documentos de referência e
 // o resultado das etapas anteriores (para manter tudo coerente).

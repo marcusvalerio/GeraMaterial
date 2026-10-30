@@ -23,6 +23,7 @@
   --raio: 10px;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--papel); color: var(--tinta); font-family: var(--texto); font-size: 16px; line-height: 1.5; }
 button, input, textarea { font: inherit; color: inherit; }
@@ -90,6 +91,33 @@ input.invalido { border-color: var(--erro); box-shadow: 0 0 0 3px #c4283a1f; }
 .btn-gerar:disabled { background: #7d9ac2; cursor: progress; }
 .aviso { margin: 12px 0 0; font-size: .92rem; color: var(--tinta-2); min-height: 1.4em; }
 .aviso.erro { color: var(--erro); }
+
+/* ---------- Leitura do plano de curso ---------- */
+.analise { margin-top: 14px; background: var(--folha); border: 1px solid var(--linha); border-radius: var(--raio); padding: 18px 20px; }
+.analise.lendo { color: var(--tinta-2); display: flex; align-items: center; gap: 12px; }
+.analise.lendo::before { content: ""; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--azul-claro); border-top-color: var(--azul); animation: girar .8s linear infinite; flex: none; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.analise.erro { border-color: #f0c3c9; background: var(--erro-claro); color: var(--erro); }
+.analise-curso { font-family: var(--serif); font-size: 1.35rem; line-height: 1.2; }
+.analise-meta { color: var(--tinta-3); font-size: .88rem; margin: 4px 0 14px; }
+.analise-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+.analise-cab span { font-family: var(--ui); font-weight: 600; font-size: .9rem; }
+.link-todas { border: 0; background: none; color: var(--azul); font-family: var(--ui); font-weight: 600; font-size: .85rem; padding: 4px 0; }
+.lista-ucs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lista-ucs label { display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: center; margin: 0; padding: 11px 12px; border: 1px solid var(--linha); border-radius: 8px; cursor: pointer; font-weight: 400; transition: border-color .15s, background .15s; }
+.lista-ucs label:hover { border-color: #b9c6d8; }
+.lista-ucs label:has(input:checked) { border-color: var(--azul); background: var(--azul-claro); }
+.lista-ucs input { width: 18px; height: 18px; margin: 0; accent-color: var(--azul); }
+.lista-ucs .uc-nome { font-family: var(--ui); font-weight: 600; font-size: .95rem; color: var(--tinta); }
+.lista-ucs .uc-modulo { display: block; font-family: var(--texto); font-size: .8rem; color: var(--tinta-3); font-weight: 400; }
+.lista-ucs .uc-ch { font-family: var(--ui); font-size: .85rem; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.uc-escolhidas { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; background: var(--azul-claro); color: var(--tinta); font-size: .92rem; }
+
+/* ---------- Abas das UCs na sequência ---------- */
+.fila-ucs { display: flex; gap: 6px; overflow-x: auto; margin: 12px -4px 0; padding: 0 4px 2px; }
+.fila-ucs button { flex: none; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--ui); font-size: .8rem; font-weight: 600; border: 1px solid var(--linha); background: var(--folha); color: var(--tinta-2); border-radius: 999px; padding: 6px 12px; }
+.fila-ucs button[aria-selected="true"] { border-color: var(--azul); background: var(--azul); color: #fff; }
+.fila-ucs button.pronta::after { content: " ✓"; }
 
 /* ---------- Pilha de folhas (a sequência) ---------- */
 .pilha { position: sticky; top: 84px; background: var(--folha); border: 1px solid var(--linha); border-radius: 14px; padding: 22px; }

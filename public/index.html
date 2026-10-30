@@ -41,7 +41,7 @@
     <form id="form" class="roteiro" novalidate>
       <section class="passo" id="passo1">
         <div class="passo-cab"><span class="passo-n">1</span><h2>Plano de curso</h2></div>
-        <p class="passo-ajuda">É a base de tudo: dele saem as capacidades, os conhecimentos e a carga horária.</p>
+        <p class="passo-ajuda">Envie o plano de curso: o sistema identifica o curso e as unidades curriculares para você escolher quais gerar.</p>
         <label class="soltar" id="upload">
           <input type="file" name="referencias" id="arquivos" multiple accept=".pdf,.docx,.txt">
           <span class="soltar-ico" aria-hidden="true">
@@ -50,14 +50,15 @@
           <span class="soltar-txt"><strong>Arraste o arquivo aqui</strong> ou clique para escolher<small>PDF, Word ou TXT</small></span>
         </label>
         <ul class="arquivos" id="listaArquivos"></ul>
+        <div class="analise" id="analise" aria-live="polite" hidden></div>
       </section>
 
       <section class="passo" id="passo2">
         <div class="passo-cab"><span class="passo-n">2</span><h2>Turma</h2></div>
-        <p class="passo-ajuda">Só os três primeiros campos são obrigatórios. O resto deixa o material mais certeiro.</p>
+        <p class="passo-ajuda" id="ajudaTurma">Só os três primeiros campos são obrigatórios. O resto deixa o material mais certeiro.</p>
         <div class="grade">
           <label>Curso<input name="curso" required placeholder="Assistente de Operações em Logística"></label>
-          <label>Unidade curricular<input name="uc" required placeholder="Logística de Armazenagem"></label>
+          <label id="campoUc">Unidade curricular<input name="uc" required placeholder="Logística de Armazenagem"></label>
           <label class="larga">Instrutor(a)<input name="instrutor" required placeholder="Seu nome como vai aparecer nos slides"></label>
         </div>
         <details class="mais">
@@ -78,7 +79,7 @@
 
       <section class="passo" id="passo3">
         <div class="passo-cab"><span class="passo-n">3</span><h2>Gerar</h2></div>
-        <p class="passo-ajuda">Leva de 5 a 15 minutos. Pode baixar cada material assim que ele ficar pronto.</p>
+        <p class="passo-ajuda" id="ajudaGerar">Leva de 5 a 15 minutos por unidade curricular. Pode baixar cada material assim que ele ficar pronto.</p>
         <button type="submit" class="btn-gerar" id="btnGerar">Gerar os cinco materiais</button>
         <p class="aviso" id="aviso" role="status"></p>
       </section>
@@ -89,6 +90,7 @@
         <h2 id="tituloPilha">Sua sequência</h2>
         <span class="contagem" id="contagem">0 de 5</span>
       </div>
+      <div class="fila-ucs" id="filaUcs" role="tablist" aria-label="Unidades curriculares" hidden></div>
       <div class="progresso" aria-hidden="true"><div id="barra"></div></div>
       <ol class="folhas" id="etapas"></ol>
     </section>
