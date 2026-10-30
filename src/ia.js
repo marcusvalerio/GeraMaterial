@@ -6,7 +6,10 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const PROVEDORES = {
   gemini: { chave: "GEMINI_API_KEY", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    modelo: "gemini-flash-latest" },
+    modelo: "gemini-flash-latest",
+    // Cada modelo tem sua própria cota diária no plano gratuito: quando um esgota, passa para o próximo.
+    reservas: ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.5-flash-lite",
+      "gemini-3.1-flash-lite", "gemini-flash-lite-latest"] },
   groq: { chave: "GROQ_API_KEY", url: "https://api.groq.com/openai/v1/chat/completions",
     modelo: "llama-3.3-70b-versatile" },
   openrouter: { chave: "OPENROUTER_API_KEY", url: "https://openrouter.ai/api/v1/chat/completions",
@@ -45,12 +48,14 @@ export async function perguntar(system, usuario) {
   // IAs gratuitas às vezes respondem "ocupado" (503) ou "limite" (429): tenta de novo com espera crescente.
   // A resposta vem em streaming para a conexão não ficar parada (respostas longas passam de 5 min).
   let r, j = {};
-  for (let tentativa = 0; tentativa < 4; tentativa++) {
+  const modelos = process.env.AI_MODEL ? [process.env.AI_MODEL] : [p.modelo, ...(p.reservas || [])];
+  let m = 0;
+  for (let tentativa = 0; tentativa < 4 + modelos.length; tentativa++) {
     r = await fetch(p.url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env[p.chave]}` },
       body: JSON.stringify({
-        model: process.env.AI_MODEL || p.modelo,
+        model: modelos[m],
         temperature: 0.4,
         stream: true,
         response_format: { type: "json_object" },
@@ -59,8 +64,10 @@ export async function perguntar(system, usuario) {
     });
     if (r.ok) break;
     j = await r.json().catch(() => ({}));
-    if (![429, 500, 503].includes(r.status)) break;
-    await new Promise((ok) => setTimeout(ok, 5000 * 2 ** tentativa));
+    if (![404, 429, 500, 503].includes(r.status)) break;
+    // Cota do modelo esgotada (429) ou modelo indisponível (404): troca de modelo na hora.
+    if ([404, 429].includes(r.status) && m < modelos.length - 1) { m++; continue; }
+    await new Promise((ok) => setTimeout(ok, 5000 * 2 ** Math.min(tentativa, 3)));
   }
   if (!r.ok) {
     const erro = Array.isArray(j) ? j[0]?.error : j.error;
