@@ -39,8 +39,22 @@ export const ETAPAS = {
   },
   slides: {
     nome: "Slides da aula (PPTX)",
-    instrucao: `Com base no Plano de Aula, crie os slides da aula (12 a 20 seções curtas, uma por slide, tópicos objetivos).
-JSON no formato: ${DOC_GENERICO}`,
+    instrucao: `Com base no Plano de Aula, crie uma apresentação MODERNA e VISUAL para a aula (14 a 20 slides).
+Varie os layouts; textos curtos (máx. ~15 palavras por item); nada de parágrafos longos. JSON:
+{ "titulo": "", "subtitulo": "", "slides": [ ... ] }
+Cada slide tem "layout" e os campos do layout:
+- "capa": { titulo, subtitulo }                                   (sempre o 1º)
+- "objetivos": { titulo, itens: ["..."] }                         (3 a 5 objetivos da aula)
+- "secao": { numero: "01", titulo, subtitulo }                    (abre cada bloco de conteúdo)
+- "cards": { titulo, cards: [ { icone: "emoji", titulo, texto } ] }   (3 ou 4 cards)
+- "passos": { titulo, passos: [ { titulo, texto } ] }             (processo/etapas, 3 a 5)
+- "comparacao": { titulo, esquerda: { titulo, itens }, direita: { titulo, itens } }
+- "destaque": { titulo, numero: "80%", texto }                    (dado, conceito-chave ou frase de impacto)
+- "topicos": { titulo, itens: ["..."] }                           (máx. 5 itens)
+- "exemplo": { titulo, contexto, pergunta }                       (caso real do mundo do trabalho)
+- "atividade": { titulo, tempo: "30 min", instrucoes: ["..."], entrega }
+- "resumo": { titulo, itens: ["..."] }                            (penúltimo)
+- "encerramento": { titulo, texto }                               (sempre o último)`,
   },
   avaliacao: {
     nome: "Avaliações (30 e 60 pontos)",

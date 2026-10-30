@@ -7,7 +7,8 @@ import { perguntar, provedorAtivo } from "./ia.js";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, contexto } from "./prompts.js";
-import { gerarDocx, gerarPdf, gerarPptx } from "./exportar.js";
+import { gerarDocx, gerarPdf } from "./exportar.js";
+import { gerarSlides } from "./slides.js";
 import { gerarPER, gerarEP190 } from "./planilhas.js";
 import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, bancoAtivo } from "./db.js";
 
@@ -76,7 +77,7 @@ const EXPORTADORES = {
   ep190: [gerarEP190, "application/vnd.ms-excel.sheet.macroEnabled.12", "xlsm"],
   docx: [gerarDocx, DOCX, "docx"],
   pdf: [gerarPdf, "application/pdf", "pdf"],
-  pptx: [gerarPptx, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
+  pptx: [gerarSlides, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
 };
 
 app.post("/api/exportar/:formato", async (req, res) => {
