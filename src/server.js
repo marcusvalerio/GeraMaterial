@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
@@ -7,6 +8,7 @@ import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, contexto } from "./prompts.js";
 import { gerarDocx, gerarPdf, gerarPptx } from "./exportar.js";
 import { gerarPER, gerarEP190 } from "./planilhas.js";
+import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, bancoAtivo } from "./db.js";
 
 const app = express();
 const client = new Anthropic(); // usa ANTHROPIC_API_KEY
@@ -74,7 +76,16 @@ app.post("/api/gerar/:etapa", upload.array("referencias"), async (req, res) => {
       return res.status(422).json({ erro: "A solicitação foi recusada pela IA. Revise os dados informados." });
     }
     const texto = resposta.content.filter((b) => b.type === "text").map((b) => b.text).join("");
-    res.json(extrairJson(texto));
+    const resultado = extrairJson(texto);
+    // Cria o registro da sequência na 1ª etapa e salva cada entrega no histórico.
+    let sequenciaId = Number(req.body.sequenciaId) || null;
+    try {
+      if (!sequenciaId) sequenciaId = await criarSequencia(dados, (req.files || []).map((f) => f.originalname));
+      await salvarEntrega(sequenciaId, req.params.etapa, resultado);
+    } catch (e) {
+      console.error("Falha ao salvar no banco:", e.message);
+    }
+    res.json({ sequenciaId, resultado });
   } catch (e) {
     console.error(e);
     const status = e instanceof Anthropic.APIError ? e.status || 502 : 500;
@@ -108,7 +119,24 @@ app.post("/api/exportar/:formato", async (req, res) => {
   }
 });
 
+app.get("/api/sequencias", async (req, res) => {
+  try { res.json({ banco: bancoAtivo(), itens: await listarSequencias(req.query.busca || "") }); }
+  catch (e) { res.status(500).json({ erro: e.message }); }
+});
+app.get("/api/sequencias/:id", async (req, res) => {
+  const s = await obterSequencia(Number(req.params.id)).catch(() => null);
+  s ? res.json(s) : res.status(404).json({ erro: "Não encontrada" });
+});
+app.delete("/api/sequencias/:id", async (req, res) => {
+  await excluirSequencia(Number(req.params.id));
+  res.json({ ok: true });
+});
+
 app.get("/api/etapas", (_req, res) => res.json(ORDEM.map((k) => ({ id: k, nome: ETAPAS[k].nome }))));
 
-const porta = process.env.PORT || 3000;
-app.listen(porta, () => console.log(`GeraMaterial SENAI rodando em http://localhost:${porta}`));
+export default app;
+
+if (!process.env.VERCEL) {
+  const porta = process.env.PORT || 3000;
+  app.listen(porta, () => console.log(`GeraMaterial SENAI rodando em http://localhost:${porta}`));
+}

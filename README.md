@@ -25,3 +25,8 @@ Acesse http://localhost:3000, preencha curso, UC, tema e capacidades, clique em 
 - `src/planilhas.js` – preenche os modelos oficiais em `modelos/` (PER .xlsx e EP-190 .xlsm) sem alterar o layout
 - `src/exportar.js` – geração de DOCX, PDF e PPTX
 - `public/` – interface web
+
+## Banco de dados (Neon)
+O histórico de sequências fica no Postgres do Neon (tabelas `sequencias` e `entregas`).
+Copie `.env.example` para `.env` e preencha `DATABASE_URL` e `ANTHROPIC_API_KEY`.
+Sem `DATABASE_URL` o sistema funciona normalmente, apenas sem histórico.
