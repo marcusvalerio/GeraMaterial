@@ -50,14 +50,19 @@ export async function perguntar(system, usuario) {
   let r, j = {};
   const modelos = process.env.AI_MODEL ? [process.env.AI_MODEL] : [p.modelo, ...(p.reservas || [])];
   let m = 0;
+  try {
   for (let tentativa = 0; tentativa < 4 + modelos.length; tentativa++) {
+    // Desiste antes do limite de 5 min da Vercel, para mostrar uma mensagem clara em vez de cair a conexão.
     r = await fetch(p.url, {
+      signal: AbortSignal.timeout(Number(process.env.AI_TEMPO_LIMITE_MS) || 285000),
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env[p.chave]}` },
       body: JSON.stringify({
         model: modelos[m],
         temperature: 0.4,
         stream: true,
+        // Raciocínio curto: o Gemini "pensa" antes de responder e isso pode passar de 5 min (limite da Vercel).
+        ...(nome === "gemini" ? { reasoning_effort: process.env.AI_ESFORCO || "low" } : {}),
         response_format: { type: "json_object" },
         messages: [{ role: "system", content: system }, { role: "user", content: usuario }],
       }),
@@ -69,6 +74,10 @@ export async function perguntar(system, usuario) {
     if ([404, 429].includes(r.status) && m < modelos.length - 1) { m++; continue; }
     await new Promise((ok) => setTimeout(ok, 5000 * 2 ** Math.min(tentativa, 3)));
   }
+  } catch (e) {
+    if (e.name === "TimeoutError" || e.name === "AbortError") throw new Error("A IA demorou mais que o limite de 5 minutos nesta etapa. Clique em tentar de novo.");
+    throw e;
+  }
   if (!r.ok) {
     const erro = Array.isArray(j) ? j[0]?.error : j.error;
     if (r.status === 429) throw new Error(`Limite gratuito da IA atingido (${nome}). Aguarde alguns minutos e tente novamente.`);
@@ -78,6 +87,7 @@ export async function perguntar(system, usuario) {
   // Lê o stream (Server-Sent Events) e junta os pedaços de texto.
   let texto = "", resto = "";
   const dec = new TextDecoder();
+  try {
   for await (const pedaco of r.body) {
     resto += dec.decode(pedaco, { stream: true });
     const linhas = resto.split("\n");
@@ -88,6 +98,10 @@ export async function perguntar(system, usuario) {
       if (!dado || dado === "[DONE]") continue;
       try { texto += JSON.parse(dado).choices?.[0]?.delta?.content || ""; } catch { /* linha parcial */ }
     }
+  }
+  } catch (e) {
+    if (e.name === "TimeoutError" || e.name === "AbortError") throw new Error("A IA demorou mais que o limite de 5 minutos nesta etapa. Clique em tentar de novo.");
+    throw e;
   }
   return texto;
 }
