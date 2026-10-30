@@ -1,4 +1,4 @@
-# GeraMaterial SENAI
+# gera.documento
 
 Aplicação web que ajuda instrutores do SENAI a gerar materiais didáticos com IA (Claude), seguindo a Metodologia SENAI de Educação Profissional (MSEP).
 

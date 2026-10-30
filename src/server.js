@@ -116,5 +116,5 @@ export default app;
 
 if (!process.env.VERCEL) {
   const porta = process.env.PORT || 3000;
-  app.listen(porta, () => console.log(`GeraMaterial SENAI rodando em http://localhost:${porta}`));
+  app.listen(porta, () => console.log(`gera.documento rodando em http://localhost:${porta}`));
 }

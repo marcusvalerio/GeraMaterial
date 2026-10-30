@@ -33,7 +33,8 @@ h1, h2, h3 { margin: 0; font-weight: 400; }
 /* ---------- Topo ---------- */
 .topo { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px clamp(16px, 4vw, 48px); border-bottom: 1px solid var(--linha); background: var(--papel); position: sticky; top: 0; z-index: 5; }
 .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--tinta); font-family: var(--ui); font-weight: 600; font-size: 1.02rem; }
-.marca small { color: var(--tinta-3); font-weight: 500; margin-left: 4px; }
+.marca .nome { letter-spacing: -.01em; }
+.marca .ponto { color: var(--azul); }
 .selo { width: 32px; height: 32px; border-radius: 8px; background: var(--azul); color: #fff; display: grid; place-items: center; font-size: .78rem; font-weight: 700; letter-spacing: .02em; }
 .topo-acoes { display: flex; align-items: center; gap: 8px; }
 .link-fontes { font-family: var(--ui); font-size: .88rem; color: var(--tinta-2); text-decoration: none; padding: 8px 10px; border-radius: 8px; }
