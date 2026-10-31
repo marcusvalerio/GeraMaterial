@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Materiais · gera.documento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topo"></header>
+<main class="palco">
+  <div class="cab-pagina">
+    <div>
+      <h1 class="titulo-pagina">Materiais</h1>
+      <p class="sub-pagina">Todas as sequências geradas. Abra para baixar de novo ou completar o que faltou.</p>
+    </div>
+    <a class="btn-gerar btn-curto" href="index.html">Gerar novos</a>
+  </div>
+  <input class="busca busca-grande" id="busca" type="search" placeholder="Buscar por curso, UC, turma ou instrutor" aria-label="Buscar materiais">
+  <ul class="lista-seq" id="lista"></ul>
+</main>
+<script type="module">
+import { $, esc, api, iniciarPagina } from "./comum.js";
+const ETAPAS = [["per", "PER"], ["plano", "EP-190"], ["slides", "Slides"], ["avaliacao", "Avaliações"], ["atividade", "Atividades"]];
+const usuario = await iniciarPagina("materiais");
+
+async function carregar() {
+  const { itens } = await api(`/api/sequencias?busca=${encodeURIComponent($("#busca").value)}`);
+  const ul = $("#lista");
+  if (!itens.length) {
+    ul.innerHTML = `<li class="vazio-grande"><h2>${$("#busca").value ? "Nada encontrado" : "Nenhum material ainda"}</h2>
+      <p>${$("#busca").value ? "Tente buscar por outra palavra." : "Envie o plano de curso no gerador e os materiais aparecem aqui."}</p>
+      ${$("#busca").value ? "" : `<a class="btn-gerar btn-curto" href="index.html">Gerar materiais</a>`}</li>`;
+    return;
+  }
+  ul.innerHTML = itens.map((s) => {
+    const feitas = ETAPAS.filter(([id]) => s.etapas.includes(id));
+    return `<li class="item-seq">
+      <a class="item-seq-link" href="index.html?sequencia=${s.id}">
+        <span class="item-seq-uc">${esc(s.uc)}</span>
+        <span class="item-seq-meta">${esc(s.curso)}${s.turma ? ` · ${esc(s.turma)}` : ""}${usuario.papel !== "instrutor" && s.instrutor ? ` · ${esc(s.instrutor)}` : ""}</span>
+        <span class="chips">${ETAPAS.map(([id, nome]) => `<span class="chip${s.etapas.includes(id) ? " ok" : ""}">${nome}</span>`).join("")}</span>
+        <span class="item-seq-data">${feitas.length} de 5 · ${new Date(s.criado_em).toLocaleDateString("pt-BR")}</span>
+      </a>
+      <button type="button" class="link-remover" data-excluir="${s.id}" aria-label="Excluir ${esc(s.uc)}">Excluir</button>
+    </li>`;
+  }).join("");
+  ul.querySelectorAll("[data-excluir]").forEach((b) => {
+    b.onclick = async () => {
+      if (!confirm("Excluir esta sequência? Os arquivos dela não poderão mais ser baixados.")) return;
+      await api(`/api/sequencias/${b.dataset.excluir}`, { metodo: "DELETE" });
+      carregar();
+    };
+  });
+}
+let t;
+$("#busca").oninput = () => { clearTimeout(t); t = setTimeout(carregar, 250); };
+if (usuario) carregar();
+</script>
+</body>
+</html>

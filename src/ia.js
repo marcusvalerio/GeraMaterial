@@ -70,8 +70,9 @@ export async function perguntar(system, usuario) {
     if (r.ok) break;
     j = await r.json().catch(() => ({}));
     if (![404, 429, 500, 503].includes(r.status)) break;
-    // Cota do modelo esgotada (429) ou modelo indisponível (404): troca de modelo na hora.
-    if ([404, 429].includes(r.status) && m < modelos.length - 1) { m++; continue; }
+    // Cota esgotada (429), modelo indisponível (404) ou sobrecarregado (503/500): troca de modelo na hora.
+    // Só espera e tenta de novo quando não há mais modelos de reserva.
+    if (m < modelos.length - 1) { m++; continue; }
     await new Promise((ok) => setTimeout(ok, 5000 * 2 ** Math.min(tentativa, 3)));
   }
   } catch (e) {
