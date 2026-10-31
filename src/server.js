@@ -22,6 +22,8 @@ const raiz = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(express.json({ limit: "5mb" }));
 app.use(carregarUsuario);
+// A raiz abre a Home (Início).
+app.get("/", (_req, res) => res.redirect("/inicio.html"));
 app.use(express.static(path.join(raiz, "..", "public")));
 
 function extrairJson(texto) {

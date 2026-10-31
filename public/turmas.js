@@ -4,7 +4,7 @@ const params = new URLSearchParams(location.search);
 const usuario = await iniciarPagina("turmas");
 const gestor = usuario && (usuario.papel === "admin" || usuario.papel === "coordenador");
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-const hojeIso = new Date().toISOString().slice(0, 10);
+const hojeIso = new Date().toLocaleDateString("en-CA"); // data local (aaaa-mm-dd)
 const fmtH = (h) => `${String(Number(h)).replace(".", ",")}h`;
 
 let dados = null; // turma aberta

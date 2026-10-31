@@ -3,7 +3,7 @@
   "short_name": "gera.doc",
   "description": "Do plano de curso à aula pronta: materiais, turmas e diário.",
   "lang": "pt-BR",
-  "start_url": "/index.html",
+  "start_url": "/inicio.html",
   "scope": "/",
   "display": "standalone",
   "background_color": "#F3F5F8",

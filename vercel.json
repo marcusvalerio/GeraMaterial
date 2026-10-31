@@ -5,5 +5,12 @@
       "maxDuration": 300,
       "includeFiles": "{modelos/**,assets/**,node_modules/lucide-static/icons/**}"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/inicio.html",
+      "permanent": false
+    }
+  ]
 }

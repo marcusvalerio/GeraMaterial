@@ -71,7 +71,7 @@ form.onsubmit = async (e) => {
       modo = "entrar"; aplicarModo();
       return;
     }
-    location.href = params.get("voltar") || "index.html";
+    location.href = params.get("voltar") || "inicio.html";
   } catch (err) {
     $("#aviso").textContent = err.message;
     $("#aviso").classList.add("erro");

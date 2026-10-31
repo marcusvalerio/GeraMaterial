@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Início · gera.documento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="icones/icone.svg" type="image/svg+xml">
+<link rel="icon" href="icones/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icones/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="gera.doc">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F3F5F8">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topo"></header>
+<main class="palco">
+  <section class="saudacao">
+    <h1 id="ola">Olá.</h1>
+    <p id="resumo">Carregando o seu dia…</p>
+  </section>
+  <nav class="tiles-areas" id="tiles" aria-label="Áreas"></nav>
+  <div class="inicio-grade">
+    <div>
+      <section class="bloco-home"><h2>Próximas aulas</h2><ul class="lista-home" id="proximas"></ul></section>
+      <section class="bloco-home"><h2>Diário pendente</h2><ul class="lista-home" id="pendentes"></ul></section>
+    </div>
+    <section class="bloco-home"><h2>Materiais recentes</h2><ul class="lista-home" id="recentes"></ul></section>
+  </div>
+</main>
+<script type="module">
+import { $, esc, api, iniciarPagina, AREAS, icone } from "./comum.js";
+const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const usuario = await iniciarPagina("inicio");
+if (usuario) {
+  const h = new Date().getHours();
+  $("#ola").textContent = `${h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"}, ${usuario.nome.split(" ")[0]}.`;
+  const { proximas, pendentes, materiais, totais } = await api("/api/inicio");
+  const gestor = usuario.papel !== "instrutor";
+  const hoje = new Date().toLocaleDateString("en-CA"); // data local (aaaa-mm-dd)
+  const aulasHoje = proximas.filter((a) => a.data === hoje).length;
+  const pend = pendentes.reduce((s, p) => s + p.aulas, 0);
+  $("#resumo").textContent = [
+    aulasHoje ? `${aulasHoje === 1 ? "Você tem 1 aula hoje" : `Você tem ${aulasHoje} aulas hoje`}` : proximas.length ? "Nenhuma aula hoje" : "",
+    pend ? `${pend} ${pend === 1 ? "aula está" : "aulas estão"} sem registro no diário` : totais.turmas ? "diário em dia" : "",
+  ].filter(Boolean).join(" · ") || "Comece enviando um plano de curso para gerar os primeiros materiais.";
+
+  const info = {
+    gerar: ["Gerar", "Do plano de curso aos 5 materiais", ""],
+    materiais: ["Materiais", "Sequências geradas", totais.materiais],
+    turmas: ["Turmas", "Diário, frequência e notas", totais.turmas],
+    painel: ["Painel", totais.pendentes_acesso ? `${totais.pendentes_acesso} acesso(s) para liberar` : "Andamento de todas as turmas", ""],
+  };
+  $("#tiles").innerHTML = AREAS.filter((a) => a.id !== "inicio" && (!a.gestor || gestor)).map((a) => `
+    <a class="tile-area" data-area="${a.id}" href="${a.href}">
+      ${icone(a, 28)}
+      ${info[a.id][2] !== "" ? `<span class="tile-num">${info[a.id][2]}</span>` : ""}
+      <div><strong>${info[a.id][0]}</strong><span>${esc(info[a.id][1])}</span></div>
+      <span class="tile-g" aria-hidden="true">g.</span>
+    </a>`).join("");
+
+  const dia = (iso) => { const d = new Date(`${iso}T12:00:00`); return `<span class="dia"><strong>${iso.slice(8, 10)}/${iso.slice(5, 7)}</strong><small>${DIAS[d.getDay()]}</small></span>`; };
+  $("#proximas").innerHTML = proximas.length ? proximas.map((a) => `<li><a href="turmas.html?id=${a.turma_id}">${dia(a.data)}
+      <span class="txt"><strong>${esc(a.turma)} · Aula ${a.numero_uc} de ${a.total_uc}</strong><span>${esc(a.conteudo_previsto || a.uc)}</span></span>
+      ${a.data === hoje ? '<span class="selo-hoje">Hoje</span>' : ""}</a></li>`).join("")
+    : `<li><p class="vazio-home">${totais.turmas ? "Nenhuma aula marcada pela frente." : 'Nenhuma turma ainda. <a href="index.html">Crie a primeira</a> a partir do plano de curso.'}</p></li>`;
+  $("#pendentes").innerHTML = pendentes.length ? pendentes.map((p) => `<li><a href="turmas.html?id=${p.id}">
+      <span class="dia"><strong>${p.aulas}</strong><small>${p.aulas === 1 ? "aula" : "aulas"}</small></span>
+      <span class="txt"><strong>${esc(p.nome)}</strong><span>Sem registro desde ${p.desde.split("-").reverse().join("/")}</span></span>
+      <span class="selo-hoje selo-pend">Pendente</span></a></li>`).join("")
+    : `<li><p class="vazio-home">Tudo registrado. Nenhuma aula sem diário.</p></li>`;
+  const ET = ["per", "plano", "slides", "avaliacao", "atividade"];
+  $("#recentes").innerHTML = materiais.length ? materiais.map((s) => `<li><a href="index.html?sequencia=${s.id}">
+      <span class="dia"><strong>${s.etapas.filter((e) => ET.includes(e)).length}</strong><small>de 5</small></span>
+      <span class="txt"><strong>${esc(s.uc)}</strong><span>${esc(s.curso)} · ${new Date(s.criado_em).toLocaleDateString("pt-BR")}</span></span></a></li>`).join("")
+    : `<li><p class="vazio-home">Nenhum material ainda. <a href="index.html">Gerar agora</a>.</p></li>`;
+}
+</script>
+</body>
+</html>

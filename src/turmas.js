@@ -4,7 +4,8 @@ import { exigeLogin, exigeGestor, ehGestor } from "./auth.js";
 import { perguntarJson } from "./ia.js";
 import { SISTEMA, ROTEIRO } from "./prompts.js";
 
-const hoje = () => new Date().toISOString().slice(0, 10);
+// Datas no horário de Brasília (o servidor roda em UTC).
+const hoje = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 const brParaIso = (s) => {
   const m = String(s || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   return m ? `${m[3]}-${m[2]}-${m[1]}` : String(s || "").slice(0, 10);
@@ -47,7 +48,7 @@ export function rotasTurmas(app) {
         (SELECT count(*)::int FROM alunos al WHERE al.turma_id = t.id AND al.ativo) AS alunos,
         (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id) AS aulas,
         (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id AND a.realizada) AS realizadas,
-        (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id AND a.data <= CURRENT_DATE AND NOT a.realizada) AS atrasadas,
+        (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id AND a.data <= (now() AT TIME ZONE 'America/Sao_Paulo')::date AND NOT a.realizada) AS atrasadas,
         (SELECT min(data) FROM aulas a WHERE a.turma_id = t.id) AS inicio,
         (SELECT max(data) FROM aulas a WHERE a.turma_id = t.id) AS termino
       FROM turmas t JOIN usuarios u ON u.id = t.usuario_id
@@ -213,20 +214,44 @@ ${entregas.map((e) => `MATERIAL JÁ GERADO (${e.etapa}):\n${JSON.stringify(e.con
     } catch (e) { console.error(e); res.status(500).json({ erro: e.message }); }
   });
 
+  // ---------- Início: resumo do dia para quem entrou ----------
+  app.get("/api/inicio", exigeLogin, async (req, res) => {
+    const uid = req.usuario.id;
+    const [proximas, pendentes, materiais, totais] = await Promise.all([
+      sql`SELECT a.id, a.uc, a.numero_uc, to_char(a.data,'YYYY-MM-DD') AS data, a.ch, a.conteudo_previsto, t.id AS turma_id, t.nome AS turma,
+            (SELECT count(*)::int FROM aulas x WHERE x.turma_id = a.turma_id AND x.uc = a.uc) AS total_uc
+          FROM aulas a JOIN turmas t ON t.id = a.turma_id
+          WHERE t.usuario_id = ${uid} AND a.data >= (now() AT TIME ZONE 'America/Sao_Paulo')::date AND NOT a.realizada
+          ORDER BY a.data, t.nome LIMIT 4`,
+      sql`SELECT t.id, t.nome, count(*)::int AS aulas, min(to_char(a.data,'YYYY-MM-DD')) AS desde
+          FROM aulas a JOIN turmas t ON t.id = a.turma_id
+          WHERE t.usuario_id = ${uid} AND a.data < (now() AT TIME ZONE 'America/Sao_Paulo')::date AND NOT a.realizada
+          GROUP BY t.id, t.nome ORDER BY aulas DESC LIMIT 5`,
+      sql`SELECT s.id, s.uc, s.curso, s.criado_em, COALESCE(array_agg(e.etapa) FILTER (WHERE e.etapa IS NOT NULL), '{}') AS etapas
+          FROM sequencias s LEFT JOIN entregas e ON e.sequencia_id = s.id
+          WHERE s.usuario_id = ${uid} GROUP BY s.id ORDER BY s.criado_em DESC LIMIT 3`,
+      sql`SELECT (SELECT count(*)::int FROM turmas WHERE usuario_id = ${uid}) AS turmas,
+                 (SELECT count(*)::int FROM sequencias WHERE usuario_id = ${uid}) AS materiais,
+                 (SELECT count(*)::int FROM aulas a JOIN turmas t ON t.id = a.turma_id WHERE t.usuario_id = ${uid} AND a.realizada) AS aulas_dadas,
+                 (SELECT count(*)::int FROM usuarios WHERE NOT aprovado) AS pendentes_acesso`,
+    ]);
+    res.json({ proximas, pendentes, materiais, totais: totais[0] });
+  });
+
   // ---------- Painel da coordenação ----------
   app.get("/api/painel", exigeLogin, exigeGestor, async (_req, res) => {
     const [instrutores, turmas, totais] = await Promise.all([
       sql`SELECT u.id, u.nome, u.email, u.papel,
             (SELECT count(*)::int FROM turmas t WHERE t.usuario_id = u.id) AS turmas,
             (SELECT count(*)::int FROM sequencias s WHERE s.usuario_id = u.id) AS sequencias,
-            (SELECT count(*)::int FROM aulas a JOIN turmas t ON t.id = a.turma_id WHERE t.usuario_id = u.id AND a.data <= CURRENT_DATE AND NOT a.realizada) AS atrasadas,
+            (SELECT count(*)::int FROM aulas a JOIN turmas t ON t.id = a.turma_id WHERE t.usuario_id = u.id AND a.data <= (now() AT TIME ZONE 'America/Sao_Paulo')::date AND NOT a.realizada) AS atrasadas,
             (SELECT max(s.criado_em) FROM sequencias s WHERE s.usuario_id = u.id) AS ultimo_material
           FROM usuarios u WHERE u.aprovado ORDER BY u.nome`,
       sql`SELECT t.id, t.nome, t.curso, u.nome AS instrutor,
             (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id) AS aulas,
             (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id AND a.realizada) AS realizadas,
-            (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id AND a.data <= CURRENT_DATE) AS previstas,
-            (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id AND a.data <= CURRENT_DATE AND NOT a.realizada) AS atrasadas,
+            (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id AND a.data <= (now() AT TIME ZONE 'America/Sao_Paulo')::date) AS previstas,
+            (SELECT count(*)::int FROM aulas a WHERE a.turma_id = t.id AND a.data <= (now() AT TIME ZONE 'America/Sao_Paulo')::date AND NOT a.realizada) AS atrasadas,
             (SELECT count(*)::int FROM alunos al WHERE al.turma_id = t.id AND al.ativo) AS alunos,
             (SELECT round(100.0 * count(*) FILTER (WHERE f.presente) / NULLIF(count(*), 0))::int
                FROM frequencias f JOIN aulas a ON a.id = f.aula_id WHERE a.turma_id = t.id) AS frequencia,
