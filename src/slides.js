@@ -60,6 +60,51 @@ function addIcone(s, nome, x, y, tam, cor = C.azul) {
   s.addImage({ data: icone(nome, cor), x, y, w: tam, h: tam });
 }
 
+
+// ---------- Medida de texto ----------
+// Os visualizadores (PowerPoint no celular, Keynote, Google) ignoram "fit: shrink".
+// Então estimamos a altura do texto (Inter) e reduzimos a fonte aqui mesmo.
+const LARG = (pt, bold) => (pt * (bold ? 0.6 : 0.555)) / 72; // largura média de um caractere, em polegadas
+function linhasDe(texto, wIn, pt, bold) {
+  const cabe = Math.max(4, Math.floor((wIn - 0.2) / LARG(pt, bold)));
+  let total = 0;
+  for (const par of String(texto).split("\n")) {
+    let n = 1, col = 0;
+    for (const p of par.split(/\s+/).filter(Boolean)) {
+      const l = p.length;
+      if (col && col + 1 + l > cabe) { n++; col = 0; }
+      col += (col ? 1 : 0) + l;
+      while (col > cabe) { n++; col -= cabe; }
+    }
+    total += n;
+  }
+  return total;
+}
+function alturaDe(t, o, pt) {
+  const base = o.fontSize || 18;
+  if (!Array.isArray(t)) return (linhasDe(t, o.w, pt, o.bold) * pt * 1.2) / 72 + 0.1;
+  let h = 0.1;
+  for (const r of t) {
+    const ro = r.options || {}, rpt = ((ro.fontSize || base) * pt) / base;
+    const w = o.w - (ro.bullet ? 0.4 : 0);
+    h += (linhasDe(r.text, w, rpt, ro.bold ?? o.bold) * rpt * 1.2 + (ro.paraSpaceAfter || o.paraSpaceAfter || 0)) / 72;
+  }
+  return h;
+}
+// Altura que um texto ocupa (para empilhar blocos sem sobrepor).
+export const medir = (t, w, pt, bold = false) => alturaDe(t, { w, bold, fontSize: pt }, pt);
+// Reduz a fonte até o texto caber na caixa (mínimo 8 pt).
+function caber(t, o) {
+  if (o.fit !== "shrink" || !o.h || !o.w) return [t, o];
+  const base = o.fontSize || 18;
+  let pt = base;
+  while (pt > 8 && alturaDe(t, o, pt) > o.h) pt -= 0.5;
+  if (pt === base) return [t, o];
+  const f = pt / base;
+  const t2 = Array.isArray(t) ? t.map((r) => (r.options?.fontSize ? { ...r, options: { ...r.options, fontSize: r.options.fontSize * f } } : r)) : t;
+  return [t2, { ...o, fontSize: pt }];
+}
+
 // ---------- Peças comuns ----------
 function olhoTitulo(s, olho, titulo) {
   if (olho) s.addText(txt(olho).toUpperCase(), { x: MX, y: 0.38, w: W - 2 * MX, h: 0.28, fontFace: FL, fontSize: fs(10), bold: true, color: C.azul, charSpacing: 1 });
@@ -166,9 +211,12 @@ const L = {
       const corT = escuro ? C.branco : C.texto, corS = escuro ? "DCE8F8" : C.cinza;
       s.addText(num(i), { x: x + 0.25, y: 1.95, w: 1, h: 0.25, fontFace: FL, fontSize: fs(9), color: escuro ? C.azulClaro : C.azul });
       if (c.icone) addIcone(s, c.icone, x + w - 0.75, 1.92, 0.45, escuro ? C.branco : C.azul);
-      s.addText(txt(c.titulo), { x: x + 0.25, y: 2.35, w: w - 0.5, h: 0.5, fontFace: F, fontSize: fs(18), bold: true, color: corT, fit: "shrink" });
-      s.addText(txt(c.texto), { x: x + 0.25, y: 2.9, w: w - 0.5, h: 1.2, fontFace: F, fontSize: fs(12), color: corS, valign: "top", fit: "shrink" });
-      if (c.citacao) s.addText(`“${txt(c.citacao)}”`, { x: x + 0.25, y: 4.2, w: w - 0.5, h: 0.9, fontFace: F, fontSize: fs(11), italic: true, color: corS, valign: "top", fit: "shrink" });
+      const tp = fs(16), hT = Math.min(medir(txt(c.titulo), w - 0.5, tp, true), 1.3);
+      s.addText(txt(c.titulo), { x: x + 0.25, y: 2.45, w: w - 0.5, h: hT, fontFace: F, fontSize: tp, bold: true, color: corT, valign: "top", fit: "shrink" });
+      const yT = 2.45 + hT + 0.08, fimCaixa = 1.7 + 3.6 - 0.15;
+      const hCit = c.citacao ? Math.min(medir(`“${txt(c.citacao)}”`, w - 0.5, fs(10.5)), 1.0) : 0;
+      s.addText(txt(c.texto), { x: x + 0.25, y: yT, w: w - 0.5, h: fimCaixa - yT - (hCit ? hCit + 0.1 : 0), fontFace: F, fontSize: fs(11.5), color: corS, valign: "top", fit: "shrink" });
+      if (c.citacao) s.addText(`“${txt(c.citacao)}”`, { x: x + 0.25, y: fimCaixa - hCit, w: w - 0.5, h: hCit, fontFace: F, fontSize: fs(10.5), italic: true, color: corS, valign: "top", fit: "shrink" });
     });
     nota(s, d.nota, 5.6);
   },
@@ -183,9 +231,12 @@ const L = {
       s.addText(String(i + 1), { x: cx, y: 1.73, w: 0.44, h: 0.44, align: "center", valign: "middle", fontFace: FL, fontSize: fs(11), bold: true, color: i === 0 ? C.branco : C.azul });
       caixa(s, x, 2.5, w, 2.6);
       if (p.icone) addIcone(s, p.icone, x + 0.2, 2.7, 0.34);
-      rotulo(s, p.rotulo, x + 0.2, p.icone ? 3.12 : 2.7, w - 0.4);
-      s.addText(txt(p.titulo), { x: x + 0.2, y: p.icone ? 3.35 : 2.95, w: w - 0.4, h: 0.4, fontFace: F, fontSize: fs(15), bold: true, color: C.texto, fit: "shrink" });
-      s.addText(txt(p.texto), { x: x + 0.2, y: p.icone ? 3.78 : 3.4, w: w - 0.4, h: 1.2, fontFace: F, fontSize: fs(11), color: C.cinza, valign: "top", fit: "shrink" });
+      let y = p.icone ? 3.12 : 2.7;
+      if (p.rotulo) { rotulo(s, p.rotulo, x + 0.2, y, w - 0.4); y += 0.27; }
+      const tp = fs(14), hT = Math.min(medir(txt(p.titulo), w - 0.4, tp, true), 1.0);
+      s.addText(txt(p.titulo), { x: x + 0.2, y, w: w - 0.4, h: hT, fontFace: F, fontSize: tp, bold: true, color: C.texto, valign: "top", fit: "shrink" });
+      y += hT + 0.05;
+      s.addText(txt(p.texto), { x: x + 0.2, y, w: w - 0.4, h: 5.0 - y, fontFace: F, fontSize: fs(11), color: C.cinza, valign: "top", fit: "shrink" });
     });
     nota(s, d.nota, 5.45);
   },
@@ -220,12 +271,12 @@ const L = {
       rotulo(s, b.rotulo, x + 0.3, 1.95, 5.3);
       if (b.icone) addIcone(s, b.icone, x + 5.15, 1.95, 0.45);
       s.addText(txt(b.titulo), { x: x + 0.3, y: 2.22, w: 4.8, h: 0.45, fontFace: F, fontSize: fs(18), bold: true, color: C.texto, fit: "shrink" });
-      s.addText(arr(b.itens).slice(0, 5).map((t) => ({ text: txt(t), options: { bullet: true, paraSpaceAfter: 6 } })),
-        { x: x + 0.3, y: 2.8, w: 5.35, h: 1.8, fontFace: F, fontSize: fs(12), color: C.texto, valign: "top", fit: "shrink" });
+      s.addText(arr(b.itens).slice(0, 5).map((t) => ({ text: txt(t), options: { bullet: true, paraSpaceAfter: 4 } })),
+        { x: x + 0.3, y: 2.8, w: 5.35, h: b.exemplo ? 2.2 : 3.3, fontFace: F, fontSize: fs(12), paraSpaceAfter: 4, color: C.texto, valign: "top", fit: "shrink" });
       if (b.exemplo) {
-        s.addShape("rect", { x: x + 0.3, y: 4.7, w: 5.35, h: 1.4, fill: { color: claro ? C.branco : C.fundo }, line: { color: C.borda, width: 0.5 } });
-        rotulo(s, "Exemplo", x + 0.45, 4.82, 5);
-        s.addText(txt(b.exemplo), { x: x + 0.45, y: 5.05, w: 5.05, h: 0.95, fontFace: F, fontSize: fs(10), color: C.cinza, valign: "top", fit: "shrink" });
+        s.addShape("rect", { x: x + 0.3, y: 5.05, w: 5.35, h: 1.1, fill: { color: claro ? C.branco : C.fundo }, line: { color: C.borda, width: 0.5 } });
+        rotulo(s, "Exemplo", x + 0.45, 5.15, 5);
+        s.addText(txt(b.exemplo), { x: x + 0.45, y: 5.38, w: 5.05, h: 0.72, fontFace: F, fontSize: fs(10), color: C.cinza, valign: "top", fit: "shrink" });
       }
     });
   },
@@ -271,17 +322,26 @@ const L = {
   tabela(s, d) {
     olhoTitulo(s, d.olho, d.titulo);
     const cab = arr(d.cabecalho).map((c) => ({ text: txt(c), options: { bold: true, color: C.branco, fill: { color: C.navy } } }));
-    const linhas = arr(d.linhas).slice(0, d.alertas ? 5 : 8).map((l) => arr(l).map((c, j) => ({ text: txt(c), options: { bold: j === 0, color: C.texto } })));
-    s.addTable([cab, ...linhas], { x: MX, y: 1.6, w: W - 2 * MX, fontFace: F, fontSize: fs(11), border: { type: "solid", color: C.borda, pt: 0.75 },
+    let linhas = arr(d.linhas).slice(0, 8).map((l) => arr(l).map((c, j) => ({ text: txt(c), options: { bold: j === 0, color: C.texto } })));
+    const nCol = Math.max(cab.length, 1), wCol = (W - 2 * MX) / nCol;
+    const altLinha = (l, pt) => Math.max(...l.map((c) => medir(c.text, wCol, pt, c.options.bold)), 0.3);
+    const altTab = (pt) => [cab, ...linhas].reduce((a, l) => a + altLinha(l, pt), 0);
+    const limite = (d.alertas ? 5.0 : 5.9) - 1.6;
+    let pt = fs(11);
+    while (pt > 8 && altTab(pt) > limite) pt -= 0.5;
+    while (linhas.length > 2 && altTab(pt) > limite) linhas = linhas.slice(0, -1);
+    s.addTable([cab, ...linhas], { x: MX, y: 1.6, w: W - 2 * MX, fontFace: F, fontSize: pt, border: { type: "solid", color: C.borda, pt: 0.75 },
       fill: { color: C.branco }, valign: "middle", margin: 0.08, autoPage: false });
+    const fimTab = 1.6 + altTab(pt) + 0.25;
     if (d.alertas) {
-      rotulo(s, d.alertasTitulo || "Erros comuns", MX, 5.35, 5, C.vermelho);
+      const ya = Math.max(fimTab, 5.0);
+      rotulo(s, d.alertasTitulo || "Erros comuns", MX, ya, 5, C.vermelho);
       arr(d.alertas).slice(0, 3).forEach((a, i) => {
         const w = (W - 2 * MX - 0.3) / 3, x = MX + i * (w + 0.15);
-        s.addShape("rect", { x, y: 5.62, w, h: 0.6, fill: { color: C.vermelhoFundo }, line: { color: C.vermelho, width: 0.75 } });
-        s.addText(txt(a), { x: x + 0.15, y: 5.62, w: w - 0.3, h: 0.6, fontFace: F, fontSize: fs(11), bold: true, color: C.texto, valign: "middle", fit: "shrink" });
+        s.addShape("rect", { x, y: ya + 0.27, w, h: 0.75, fill: { color: C.vermelhoFundo }, line: { color: C.vermelho, width: 0.75 } });
+        s.addText(txt(a), { x: x + 0.15, y: ya + 0.27, w: w - 0.3, h: 0.75, fontFace: F, fontSize: fs(10.5), bold: true, color: C.texto, valign: "middle", fit: "shrink" });
       });
-    } else nota(s, d.nota);
+    } else nota(s, d.nota, Math.max(fimTab, 6.3));
   },
   caso(s, d) {
     olhoTitulo(s, d.olho, d.titulo);
@@ -453,6 +513,8 @@ export async function gerarSlides(m) {
   pptx.title = txt(m.titulo);
   m.slides.forEach((d, i) => {
     const s = pptx.addSlide();
+    const addOrig = s.addText.bind(s);
+    s.addText = (t, o = {}) => addOrig(...caber(t, o));
     s.background = { color: C.fundo };
     (L[d.layout] || L.lista)(s, d, m);
     if (d.layout !== "capa") rodape(s, m, i + 1, d.layout === "abertura" || d.layout === "secao");

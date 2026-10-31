@@ -71,7 +71,17 @@ function render() {
       b.type = "button";
       b.textContent = "Tentar de novo a partir daqui";
       b.className = "btn-retentar";
-      b.onclick = () => gerarFila(atual, i);
+      b.onclick = () => gerarFila(atual, i, true);
+      corpo.append(b);
+    }
+    // Sequência salva e incompleta: continua da primeira etapa que falta, sem refazer as prontas.
+    const primeiraFalta = ETAPAS.findIndex((e) => !it.resultados[e.id]);
+    if (i === primeiraFalta && it.dados && !gerando && st.tipo !== "erro" && st.tipo !== "gerando") {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = "Continuar gerando daqui";
+      b.className = "btn-retentar btn-continuar";
+      b.onclick = () => gerarFila(atual, i, true);
       corpo.append(b);
     }
     ol.append(li);
@@ -514,9 +524,11 @@ async function acompanhar(id) {
   }
 }
 
-async function gerarFila(inicioUc = 0, inicioEtapa = 0) {
-  if (gerando || !validar()) return;
-  if (!inputArq.files.length && !turmaAtual) avisar("Sem plano de curso, a IA usa só os dados da turma. Funciona, mas fica menos preciso.");
+async function gerarFila(inicioUc = 0, inicioEtapa = 0, continuar = false) {
+  const salva = continuar && fila[inicioUc]?.dados;
+  if (gerando || (!salva && !validar())) return;
+  if (salva) avisar("");
+  else if (!inputArq.files.length && !turmaAtual) avisar("Sem plano de curso, a IA usa só os dados da turma. Funciona, mas fica menos preciso.");
   else avisar("");
   const fd = new FormData($("#form"));
   const arquivos = fd.getAll("referencias").filter((f) => f.size);
@@ -533,7 +545,8 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0) {
   for (let k = inicioUc; k < fila.length && !parou; k++) {
     atual = k;
     const it = fila[k];
-    const dados = dadosDaUc(base, it.uc);
+    const dados = (continuar && it.dados) || dadosDaUc(base, it.uc);
+    it.dados = dados;
     for (let i = k === inicioUc ? inicioEtapa : 0; i < ETAPAS.length; i++) {
       const etapa = ETAPAS[i];
       // Na retomada, pula o que já está pronto (exceto a etapa pedida).
@@ -544,7 +557,7 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0) {
       corpo.append("dados", JSON.stringify(dados));
       corpo.append("anteriores", JSON.stringify(it.resultados));
       if (it.sequenciaId) corpo.append("sequenciaId", it.sequenciaId);
-      if (turmaAtual) corpo.append("turmaId", turmaAtual.id);
+      if (turmaAtual || it.turmaId) corpo.append("turmaId", turmaAtual?.id || it.turmaId);
       arquivos.forEach((f) => corpo.append("referencias", f));
       try {
         const r = await fetch(`/api/gerar/${etapa.id}`, { method: "POST", body: corpo });
@@ -616,7 +629,7 @@ async function abrir(id) {
   if (!r.ok) return;
   const s = await r.json();
   limparPlano();
-  fila = [{ ...novoItem(), resultados: s.resultados || {}, sequenciaId: s.id }];
+  fila = [{ ...novoItem(), resultados: s.resultados || {}, sequenciaId: s.id, dados: s.dados, turmaId: s.turma_id }];
   atual = 0;
   const form = $("#form");
   form.reset();
