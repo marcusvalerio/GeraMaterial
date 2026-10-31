@@ -601,3 +601,31 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
   .inicio-grade { grid-template-columns: minmax(0, 1fr); }
   .saudacao h1 { font-size: 2rem; }
 }
+
+/* ---------- Opções em cartão (participação, formato de avaliação) ---------- */
+.escolha { border: 0; padding: 0; margin: 4px 0 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.escolha legend, .cartao-av legend { font-family: var(--ui); font-size: .88rem; font-weight: 600; margin-bottom: 8px; padding: 0; }
+.opcao { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 12px; border: 1px solid var(--linha); border-radius: 10px; background: var(--folha); cursor: pointer; font-weight: 400; }
+.opcao input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--azul); flex: none; }
+.opcao strong { display: block; font-family: var(--ui); font-size: .92rem; color: var(--tinta); }
+.opcao small { display: block; font-size: .8rem; color: var(--tinta-3); margin-top: 2px; }
+.opcao:has(input:checked) { border-color: var(--azul); background: var(--azul-claro); }
+.crono-minhas { background: var(--amarelo-claro); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-size: .9rem; }
+.crono-minhas ul { margin: 6px 0 0; padding-left: 18px; }
+.crono-tabela tr.fora td { color: var(--tinta-3); }
+
+.avaliacoes { display: grid; gap: 14px; }
+.sugestao-av { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: var(--azul-claro); border-radius: 12px; padding: 12px 14px; font-size: .9rem; }
+.cartao-av { border: 1px solid var(--linha); border-radius: 14px; padding: 16px; margin: 0; background: var(--folha); min-width: 0; }
+.cartao-av.escolhido { border-color: #b9c6d8; }
+.cartao-av legend { display: flex; align-items: center; gap: 8px; padding: 0 6px; margin-left: -6px; font-size: 1rem; }
+.cartao-av .pts { font-family: var(--ui); font-size: .75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--tinta); color: #fff; }
+.tipos-av { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.campos-av .grade { margin-top: 2px; }
+.campos-av select { display: block; width: 100%; margin-top: 6px; padding: 11px 13px; border: 1px solid var(--linha); border-radius: 8px; background: var(--folha); font: inherit; font-weight: 400; }
+.dica-av { margin: -4px 0 12px; font-size: .86rem; color: var(--azul); font-weight: 600; }
+.obs-av { margin-bottom: 0; }
+@media (max-width: 760px) {
+  .escolha, .tipos-av { grid-template-columns: minmax(0, 1fr); }
+  .campos-av select { font-size: 16px; min-height: 46px; }
+}

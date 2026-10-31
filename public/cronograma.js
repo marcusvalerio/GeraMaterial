@@ -122,13 +122,25 @@ export function montarCronograma(ucs, cfg) {
 }
 
 // Dados de uma UC no formato que vai para o PER (datas reais, não inventadas pela IA).
-export function cronogramaDaUc(crono, nomeUc) {
+// Aulas do instrutor dentro do período em que ele dá aula (de/até opcionais).
+export function noPeriodo(data, periodo) {
+  if (!periodo) return true;
+  if (periodo.de && data < periodo.de) return false;
+  if (periodo.ate && data > periodo.ate) return false;
+  return true;
+}
+
+export function cronogramaDaUc(crono, nomeUc, periodo = null) {
   const u = crono?.ucs.find((x) => x.nome === nomeUc);
   if (!u) return null;
+  const minhas = u.aulas.map((a, i) => ({ ...a, n: i + 1 })).filter((a) => noPeriodo(a.data, periodo));
+  if (!minhas.length) return { vazio: true, total: u.aulas.length };
+  const parcial = minhas.length < u.aulas.length;
   return {
-    dataInicio: u.inicio ? dataBr(u.inicio) : "",
-    dataTermino: u.termino ? dataBr(u.termino) : "",
-    aulas: u.aulas.map((a) => ({ data: dataBr(a.data), ch: `${String(a.ch).replace(".", ",")}h` })),
+    dataInicio: dataBr(minhas[0].data),
+    dataTermino: dataBr(minhas.at(-1).data),
+    aulas: minhas.map((a) => ({ data: dataBr(a.data), ch: `${String(a.ch).replace(".", ",")}h` })),
+    total: u.aulas.length, primeira: minhas[0].n, ultima: minhas.at(-1).n, parcial,
   };
 }
 

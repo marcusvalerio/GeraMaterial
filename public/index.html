@@ -96,7 +96,22 @@
           <label><input type="checkbox" value="6">Sáb</label>
         </fieldset>
         <label>Outros dias sem aula <span class="opcional">(opcional)</span><input name="semAula" id="semAula" placeholder="Ex.: 24/12/2026 a 06/01/2027, 08/12/2026"></label>
+        <fieldset class="escolha" id="participacao">
+          <legend>Sua participação na turma</legend>
+          <label class="opcao"><input type="radio" name="participacao" value="tudo" checked><span><strong>Do início ao fim</strong><small>Você dá todas as aulas das UCs escolhidas</small></span></label>
+          <label class="opcao"><input type="radio" name="participacao" value="periodo"><span><strong>Só um período</strong><small>Assumiu a turma no meio, cobre alguns dias ou uma substituição</small></span></label>
+        </fieldset>
+        <div class="grade" id="periodoCampos" hidden>
+          <label>Começo a dar aula em<input type="date" id="periodoDe"></label>
+          <label>Até <span class="opcional">(opcional)</span><input type="date" id="periodoAte"></label>
+        </div>
         <div class="cronograma" id="cronograma" aria-live="polite"></div>
+      </section>
+
+      <section class="passo" id="passoAval">
+        <div class="passo-cab"><span class="passo-n" id="numAval">3</span><h2>Avaliações</h2></div>
+        <p class="passo-ajuda">Como você quer avaliar? Escolha o formato de cada avaliação. Se preferir, use a sugestão e ajuste.</p>
+        <div class="avaliacoes" id="avaliacoes"></div>
       </section>
 
       <section class="passo" id="passo3">

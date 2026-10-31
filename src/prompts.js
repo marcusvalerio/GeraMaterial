@@ -77,9 +77,15 @@ MOSTRE o desenho com o layout correspondente (ishikawa, ciclo, grafico, fluxo), 
   },
   avaliacao: {
     nome: "Avaliações (30 e 60 pontos)",
-    instrucao: `Com base no PER e no Plano de Aula, elabore DUAS avaliações com gabarito: uma valendo 30 pontos e outra valendo 60 pontos.
-A soma das pontuações das questões deve fechar exatamente 30 e 60. Inclua questões objetivas contextualizadas e
-dissertativas/práticas, gabarito comentado e matriz de correção (Questão | Capacidade | Critério | Crítico/Desejável | Pontos).
+    instrucao: `Com base no PER e no Plano de Aula, elabore DUAS avaliações: uma valendo 30 pontos e outra valendo 60 pontos.
+Siga EXATAMENTE o "Formato das avaliações escolhido pelo instrutor" (informado acima) — não troque o formato.
+- Prova: exatamente o número de questões pedido; as primeiras são objetivas de múltipla escolha (alternativas a–e, contextualizadas)
+  e as demais discursivas, na quantidade indicada. Inclua gabarito comentado.
+- Atividade em grupo: orientações para formar os grupos (alunos por grupo), o desafio, o que cada grupo entrega/apresenta,
+  tempo de preparo e de apresentação, e rubrica de avaliação por critérios.
+- Prática ou situação-problema: contexto real, tarefa, recursos, tempo e rubrica por critérios.
+Em todas: a soma das pontuações fecha exatamente 30 e 60, e há matriz de correção
+(Item | Capacidade | Critério | Crítico/Desejável | Pontos).
 JSON: { "avaliacao30": ${DOC_GENERICO}, "avaliacao60": ${DOC_GENERICO} }`,
   },
   atividade: {
@@ -91,6 +97,25 @@ JSON: { "teorica": ${DOC_GENERICO}, "pratica": ${DOC_GENERICO} }`,
 };
 
 export const ORDEM = ["per", "plano", "slides", "avaliacao", "atividade"];
+
+// Formato das avaliações escolhido pelo instrutor, em texto para a IA.
+export function descreverAvaliacoes(av) {
+  if (!av) return "";
+  const um = (pts, a) => {
+    if (!a) return "";
+    const obs = a.obs ? ` Observação do instrutor: ${a.obs}` : "";
+    if (a.tipo === "prova") {
+      const disc = a.questoes - a.objetivas;
+      const faixa = a.objetivas === a.questoes ? `todas as ${a.questoes} objetivas de múltipla escolha`
+        : a.objetivas === 0 ? `todas as ${a.questoes} discursivas`
+        : `questões 1 a ${a.objetivas} objetivas de múltipla escolha e ${a.objetivas + 1} a ${a.questoes} discursivas (${disc})`;
+      return `- Avaliação de ${pts} pontos: PROVA com ${a.questoes} questões — ${faixa}.${obs}`;
+    }
+    if (a.tipo === "grupo") return `- Avaliação de ${pts} pontos: ATIVIDADE EM GRUPO, ${a.porGrupo} alunos por grupo, entrega: ${a.entrega}.${obs}`;
+    return `- Avaliação de ${pts} pontos: PRÁTICA / SITUAÇÃO-PROBLEMA avaliada por rubrica.${obs}`;
+  };
+  return `\nFormato das avaliações escolhido pelo instrutor (obrigatório):\n${um(30, av["30"])}\n${um(60, av["60"])}`;
+}
 
 export function contexto(d) {
   return `Dados informados pelo instrutor:
@@ -106,7 +131,7 @@ export function contexto(d) {
 - Instrutor: ${d.instrutor || "-"} | Segmento: ${d.segmento || "-"}
 - Tema da situação de aprendizagem: ${d.tema || "-"}
 - Recursos/ambiente: ${d.recursos || "-"}
-- Observações: ${d.observacoes || "-"}`;
+- Observações: ${d.observacoes || "-"}${d.participacao ? `\n- Participação do instrutor: ${d.participacao}` : ""}${descreverAvaliacoes(d.avaliacoes)}`;
 }
 
 // Leitura do plano de curso: identifica o curso e todas as unidades curriculares.

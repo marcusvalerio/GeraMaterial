@@ -1,4 +1,4 @@
-import { montarCronograma, cronogramaDaUc, lerDiasSemAula, dataBr } from "./cronograma.js";
+import { montarCronograma, cronogramaDaUc, lerDiasSemAula, dataBr, noPeriodo } from "./cronograma.js";
 import { iniciarPagina } from "./comum.js";
 
 // Sequência padrão: cada etapa usa o resultado das anteriores.
@@ -188,7 +188,8 @@ function aplicarModoUc() {
   const n = ucsEscolhidas().length;
   $("#campoUc").hidden = comLista;
   $("#passoCal").hidden = !comLista;
-  $("#numGerar").textContent = comLista ? "4" : "3";
+  $("#numAval").textContent = comLista ? "4" : "3";
+  $("#numGerar").textContent = comLista ? "5" : "4";
   document.querySelectorAll(".so-manual").forEach((el) => { el.hidden = comLista; });
   $("#campoUc input").required = !comLista;
   $("#ajudaTurma").textContent = comLista
@@ -209,8 +210,29 @@ function aplicarModoUc() {
 }
 
 // ---------- Calendário da turma ----------
+// Período em que o instrutor dá aula (null = turma inteira).
+function periodo() {
+  if (document.querySelector("input[name=participacao]:checked")?.value !== "periodo") return null;
+  const data = (v) => { if (!v) return null; const [a, m, d] = v.split("-").map(Number); return new Date(a, m - 1, d); };
+  const de = data($("#periodoDe").value), ate = data($("#periodoAte").value);
+  return de || ate ? { de, ate } : null;
+}
+
 function diasEscolhidos() {
   return [...document.querySelectorAll("#diasSemana input:checked")].map((c) => Number(c.value));
+}
+
+function resumoPeriodo() {
+  const per = periodo();
+  if (!per || !crono) return "";
+  const escolhidas = ucsEscolhidas();
+  const linhas = (escolhidas.length ? escolhidas : analise.ucs).map((u) => {
+    const d = cronogramaDaUc(crono, u.nome, per);
+    if (!d) return "";
+    return d.vazio ? `<li><strong>${esc(u.nome)}</strong>: nenhuma aula sua neste período</li>`
+      : `<li><strong>${esc(u.nome)}</strong>: aulas ${d.primeira} a ${d.ultima} de ${d.total} (${d.dataInicio} a ${d.dataTermino})</li>`;
+  }).join("");
+  return `<div class="crono-minhas"><strong>Suas aulas</strong><ul>${linhas}</ul></div>`;
 }
 
 function calcularCronograma() {
@@ -238,9 +260,10 @@ function calcularCronograma() {
       <div><strong>${crono.totalHoras}h</strong><span>carga horária</span></div>
     </div>
     <p class="crono-periodo">O curso vai de <strong>${dataBr(crono.inicio)}</strong> a <strong>${dataBr(crono.termino)}</strong>.</p>
+    ${resumoPeriodo()}
     <div class="tabela-rolagem"><table class="crono-tabela">
       <thead><tr><th>Unidade curricular</th><th class="num">Horas</th><th class="num">Aulas</th><th class="num">Início</th><th class="num">Término</th><th class="num">Semanas</th></tr></thead>
-      <tbody>${crono.ucs.map((u) => `<tr class="${escolhidas.has(u.nome) ? "escolhida" : ""}">
+      <tbody>${crono.ucs.map((u) => `<tr class="${escolhidas.has(u.nome) ? "escolhida" : ""}${periodo() && !u.aulas.some((x) => noPeriodo(x.data, periodo())) ? " fora" : ""}">
         <td>${esc(u.nome)}</td><td class="num">${u.horas}h</td><td class="num">${u.aulas.length}</td>
         <td class="num">${u.inicio ? dataBr(u.inicio) : "-"}</td><td class="num">${u.termino ? dataBr(u.termino) : "-"}</td><td class="num">${u.semanas}</td></tr>`).join("")}</tbody>
     </table></div>
@@ -280,10 +303,14 @@ async function salvarTurma() {
     form.elements.turma.value = nome;
   }
   let n = 0;
-  const aulas = crono.ucs.flatMap((u) => u.aulas.map((a, i) => ({ uc: u.nome, numero: ++n, numero_uc: i + 1, data: dataBr(a.data), ch: a.ch })));
+  const per = periodo();
+  const aulas = crono.ucs.flatMap((u) => u.aulas.map((a, i) => ({ uc: u.nome, numero: ++n, numero_uc: i + 1, data: dataBr(a.data), ch: a.ch, d: a.data })))
+    .filter((a) => noPeriodo(a.d, per)).map(({ d, ...a }) => a);
+  if (!aulas.length) { avisar("Nenhuma aula sua no período informado. Confira as datas de participação.", true); return; }
   const dados = {
     analise: { ...analise, referencia: undefined }, referencia: analise.referencia || "",
-    calendario: { inicio: $("#inicioCurso").value, horasAula: $("#horasAula").value, dias: diasEscolhidos(), semAula: $("#semAula").value },
+    calendario: { inicio: $("#inicioCurso").value, horasAula: $("#horasAula").value, dias: diasEscolhidos(), semAula: $("#semAula").value,
+      participacao: per ? { de: $("#periodoDe").value, ate: $("#periodoAte").value } : null },
     turma: { modalidade: form.elements.modalidade.value, segmento: form.elements.segmento.value, recursos: form.elements.recursos.value, dias: form.elements.dias.value },
   };
   $("#btnSalvarTurma").disabled = true;
@@ -326,6 +353,11 @@ async function carregarTurma(id) {
     $("#horasAula").value = d.calendario.horasAula || 4;
     $("#semAula").value = d.calendario.semAula || "";
     document.querySelectorAll("#diasSemana input").forEach((c) => { c.checked = (d.calendario.dias || []).includes(Number(c.value)); });
+    const part = d.calendario.participacao;
+    document.querySelector(`input[name=participacao][value="${part ? "periodo" : "tudo"}"]`).checked = true;
+    $("#periodoCampos").hidden = !part;
+    $("#periodoDe").value = part?.de || "";
+    $("#periodoAte").value = part?.ate || "";
   }
   $("#listaArquivos").innerHTML = `<li>Plano de curso da turma ${esc(turma.nome)}</li>`;
   $("#analise").hidden = false;
@@ -338,6 +370,83 @@ async function carregarTurma(id) {
   aoEscolherUc();
 }
 
+// ---------- Avaliações: o instrutor sempre escolhe o formato ----------
+const TIPOS_AV = {
+  prova: ["Prova", "Questões objetivas e/ou discursivas"],
+  grupo: ["Atividade em grupo", "Grupos preparam e apresentam algo"],
+  pratica: ["Prática ou situação-problema", "Tarefa prática avaliada por critérios"],
+};
+const ENTREGAS = ["Apresentação oral", "Cartaz ou painel", "Relatório escrito", "Protótipo ou demonstração prática"];
+
+function cartaoAvaliacao(pts) {
+  return `<fieldset class="cartao-av" data-pts="${pts}">
+    <legend><span class="pts">${pts} pontos</span> Avaliação de ${pts}</legend>
+    <div class="tipos-av">${Object.entries(TIPOS_AV).map(([k, [t, d]]) => `<label class="opcao"><input type="radio" name="av${pts}" value="${k}"><span><strong>${t}</strong><small>${d}</small></span></label>`).join("")}</div>
+    <div class="campos-av" data-tipo="prova" hidden>
+      <div class="grade">
+        <label>Quantas questões<input type="number" min="1" max="40" data-c="questoes" inputmode="numeric"></label>
+        <label>Quantas objetivas (múltipla escolha)<input type="number" min="0" max="40" data-c="objetivas" inputmode="numeric"></label>
+      </div>
+      <p class="dica-av" data-dica></p>
+    </div>
+    <div class="campos-av" data-tipo="grupo" hidden>
+      <div class="grade">
+        <label>Alunos por grupo<input type="number" min="2" max="10" data-c="porGrupo" inputmode="numeric"></label>
+        <label>O que os grupos entregam<select data-c="entrega">${ENTREGAS.map((e) => `<option>${e}</option>`).join("")}</select></label>
+      </div>
+    </div>
+    <div class="campos-av" data-tipo="pratica" hidden></div>
+    <label class="obs-av">Observação para a IA <span class="opcional">(opcional)</span><input data-c="obs" placeholder="Ex.: incluir cálculo da curva ABC; prova sem consulta"></label>
+  </fieldset>`;
+}
+
+function montarAvaliacoes() {
+  $("#avaliacoes").innerHTML = `<div class="sugestao-av"><span><strong>Sugestão:</strong> 30 pontos em prova (10 questões: 1 a 8 objetivas, 9 e 10 discursivas)
+    e 60 pontos em atividade em grupo com apresentação.</span><button type="button" class="btn-secundario" id="btnSugestao">Usar sugestão</button></div>`
+    + cartaoAvaliacao(30) + cartaoAvaliacao(60);
+  $("#avaliacoes").addEventListener("change", atualizarAvaliacoes);
+  $("#avaliacoes").addEventListener("input", atualizarAvaliacoes);
+  $("#btnSugestao").onclick = () => {
+    const set = (pts, tipo, campos) => {
+      const c = document.querySelector(`.cartao-av[data-pts="${pts}"]`);
+      c.querySelector(`input[value="${tipo}"]`).checked = true;
+      for (const [k, v] of Object.entries(campos)) c.querySelector(`.campos-av[data-tipo="${tipo}"] [data-c="${k}"]`).value = v;
+    };
+    set(30, "prova", { questoes: 10, objetivas: 8 });
+    set(60, "grupo", { porGrupo: 4, entrega: "Apresentação oral" });
+    atualizarAvaliacoes();
+  };
+}
+
+function atualizarAvaliacoes() {
+  document.querySelectorAll(".cartao-av").forEach((c) => {
+    const tipo = c.querySelector("input[type=radio]:checked")?.value;
+    c.classList.toggle("escolhido", Boolean(tipo));
+    c.querySelectorAll(".campos-av").forEach((b) => { b.hidden = b.dataset.tipo !== tipo; });
+    const q = Number(c.querySelector('[data-c="questoes"]').value) || 0;
+    const o = Math.min(Number(c.querySelector('[data-c="objetivas"]').value) || 0, q);
+    c.querySelector("[data-dica]").textContent = !q ? "Informe o total de questões."
+      : o === q ? `Todas as ${q} objetivas.` : o === 0 ? `Todas as ${q} discursivas.`
+      : `Questões 1 a ${o} objetivas e ${o + 1 === q ? q : `${o + 1} a ${q}`} discursiva${q - o > 1 ? "s" : ""}.`;
+  });
+  marcarPassos();
+}
+
+// Lê as escolhas. Retorna null se alguma avaliação estiver sem formato.
+function lerAvaliacoes() {
+  const r = {};
+  for (const c of document.querySelectorAll(".cartao-av")) {
+    const tipo = c.querySelector("input[type=radio]:checked")?.value;
+    if (!tipo) return null;
+    const v = (k) => c.querySelector(`[data-c="${k}"]`)?.value?.trim();
+    const item = { tipo, obs: v("obs") || "" };
+    if (tipo === "prova") { item.questoes = Number(v("questoes")) || 10; item.objetivas = Math.min(Number(v("objetivas")) || 0, item.questoes); }
+    if (tipo === "grupo") { item.porGrupo = Number(v("porGrupo")) || 4; item.entrega = v("entrega"); }
+    r[c.dataset.pts] = item;
+  }
+  return r;
+}
+
 // ---------- Geração ----------
 function validar() {
   const form = $("#form");
@@ -346,6 +455,17 @@ function validar() {
   if (analise && !ucsEscolhidas().length) {
     avisar("Escolha pelo menos uma unidade curricular no passo 1.", true);
     $("#analise").scrollIntoView({ behavior: "smooth", block: "center" });
+    return false;
+  }
+  const av = lerAvaliacoes();
+  if (!av) {
+    avisar("Escolha o formato das duas avaliações (30 e 60 pontos) no passo Avaliações.", true);
+    $("#passoAval").scrollIntoView({ behavior: "smooth", block: "center" });
+    return false;
+  }
+  if (analise && crono && periodo() && ucsEscolhidas().every((u) => cronogramaDaUc(crono, u.nome, periodo())?.vazio)) {
+    avisar("Nenhuma das UCs escolhidas tem aula sua no período informado. Confira as datas.", true);
+    $("#passoCal").scrollIntoView({ behavior: "smooth", block: "center" });
     return false;
   }
   if (analise && !crono) {
@@ -363,10 +483,11 @@ function validar() {
 
 function dadosDaUc(base, uc) {
   if (!uc) return base;
-  const datas = cronogramaDaUc(crono, uc.nome);
+  const datas = cronogramaDaUc(crono, uc.nome, periodo());
   return { ...base, uc: uc.nome, cargaHorariaUC: uc.cargaHoraria || "", modulo: uc.modulo || "",
     cargaHorariaCurso: analise?.cargaHoraria || "",
-    ...(datas ? { dataInicio: datas.dataInicio, dataTermino: datas.dataTermino, aulasCronograma: datas.aulas,
+    ...(datas?.parcial ? { participacao: `O instrutor assume apenas as aulas ${datas.primeira} a ${datas.ultima} de ${datas.total} desta UC (${datas.dataInicio} a ${datas.dataTermino}). As aulas anteriores foram dadas por outro instrutor: não repita o conteúdo inicial, parta do ponto em que a turma está e foque nas capacidades restantes.` } : {}),
+    ...(datas && !datas.vazio ? { dataInicio: datas.dataInicio, dataTermino: datas.dataTermino, aulasCronograma: datas.aulas,
       horasAula: base.horasAula, diasAula: diasEscolhidos().map((d) => ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][d]).join(", ") } : {}) };
 }
 
@@ -379,7 +500,7 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0) {
   const arquivos = fd.getAll("referencias").filter((f) => f.size);
   fd.delete("referencias");
   fd.delete("ucEscolhida");
-  const base = Object.fromEntries(fd);
+  const base = { ...Object.fromEntries(fd), avaliacoes: lerAvaliacoes() };
 
   gerando = true;
   $("#btnGerar").disabled = true;
@@ -531,6 +652,7 @@ function marcarPassos() {
   const form = $("#form");
   $("#passo1").classList.toggle("feito", (inputArq.files.length > 0 || Boolean(turmaAtual)) && (!analise || ucsEscolhidas().length > 0));
   const campos = analise ? ["curso", "instrutor"] : ["curso", "uc", "instrutor"];
+  $("#passoAval")?.classList.toggle("feito", Boolean(document.querySelector(".cartao-av") && lerAvaliacoes()));
   $("#passo2").classList.toggle("feito", campos.every((n) => form.elements[n].value.trim()));
 }
 $("#btnMenu").onclick = () => gaveta(true);
@@ -555,7 +677,14 @@ up.ondragover = (e) => { e.preventDefault(); up.classList.add("arrastando"); };
 up.ondragleave = () => up.classList.remove("arrastando");
 up.ondrop = (e) => { e.preventDefault(); up.classList.remove("arrastando"); inputArq.files = e.dataTransfer.files; aoTrocarArquivo(); };
 
-["#inicioCurso", "#horasAula", "#semAula"].forEach((sel) => $(sel).addEventListener("input", calcularCronograma));
+["#inicioCurso", "#horasAula", "#semAula", "#periodoDe", "#periodoAte"].forEach((sel) => $(sel).addEventListener("input", calcularCronograma));
+$("#participacao").addEventListener("change", () => {
+  const per = document.querySelector("input[name=participacao]:checked").value === "periodo";
+  $("#periodoCampos").hidden = !per;
+  if (per && !$("#periodoDe").value) $("#periodoDe").value = new Date().toLocaleDateString("en-CA");
+  calcularCronograma();
+});
+montarAvaliacoes();
 $("#diasSemana").addEventListener("change", calcularCronograma);
 
 const usuario = await iniciarPagina("gerar");
