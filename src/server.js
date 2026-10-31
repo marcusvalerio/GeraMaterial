@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import { waitUntil } from "@vercel/functions";
 import multer from "multer";
 import mammoth from "mammoth";
 import { extractText } from "unpdf";
@@ -74,15 +75,29 @@ app.post("/api/analisar", exigeLogin, upload.array("referencias"), async (req, r
 
 // Gera uma etapa da sequência. Recebe os dados, os documentos de referência e
 // o resultado das etapas anteriores (para manter tudo coerente).
+async function executarEtapa(etapaId, dados, anteriores, referencia) {
+  const etapa = ETAPAS[etapaId];
+  const ctxAnteriores = ORDEM.filter((k) => anteriores[k])
+    .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
+  const usuario = `${referencia}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
+  const resultado = await perguntarJson(SISTEMA, usuario);
+  // O PER usa as datas do calendário calculado (exatas), não as que a IA sugerir.
+  if (etapaId === "per" && Array.isArray(dados.aulasCronograma) && dados.aulasCronograma.length) {
+    resultado.aulas = dados.aulasCronograma;
+    if (dados.dataInicio) resultado.dataInicio = dados.dataInicio;
+    if (dados.dataTermino) resultado.dataTermino = dados.dataTermino;
+    if (dados.cargaHorariaUC) resultado.cargaHorariaUC = dados.cargaHorariaUC;
+  }
+  return resultado;
+}
+
+// A geração roda no servidor em segundo plano: o app pode ser fechado ou ir para o fundo
+// (o celular corta a conexão) e o trabalho continua. O app acompanha por /api/trabalhos/:id.
 app.post("/api/gerar/:etapa", exigeLogin, upload.array("referencias"), async (req, res) => {
   try {
-    const etapa = ETAPAS[req.params.etapa];
-    if (!etapa) return res.status(400).json({ erro: "Etapa inválida" });
+    if (!ETAPAS[req.params.etapa]) return res.status(400).json({ erro: "Etapa inválida" });
     const dados = JSON.parse(req.body.dados || "{}");
     const anteriores = JSON.parse(req.body.anteriores || "{}");
-
-    const ctxAnteriores = ORDEM.filter((k) => anteriores[k])
-      .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
 
     // Sem arquivo enviado, usa o plano de curso guardado na turma.
     let referencia = await textoReferencias(req.files);
@@ -91,30 +106,41 @@ app.post("/api/gerar/:etapa", exigeLogin, upload.array("referencias"), async (re
       const [t] = await sql`SELECT usuario_id, dados FROM turmas WHERE id = ${turmaId}`;
       if (t && (ehGestor(req.usuario) || Number(t.usuario_id) === req.usuario.id)) referencia = t.dados?.referencia || "";
     }
-    const usuario = `${referencia}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
-    const resultado = await perguntarJson(SISTEMA, usuario);
-    // O PER usa as datas do calendário calculado (exatas), não as que a IA sugerir.
-    if (req.params.etapa === "per" && Array.isArray(dados.aulasCronograma) && dados.aulasCronograma.length) {
-      resultado.aulas = dados.aulasCronograma;
-      if (dados.dataInicio) resultado.dataInicio = dados.dataInicio;
-      if (dados.dataTermino) resultado.dataTermino = dados.dataTermino;
-      if (dados.cargaHorariaUC) resultado.cargaHorariaUC = dados.cargaHorariaUC;
-    }
-    // Cria o registro da sequência na 1ª etapa e salva cada entrega no histórico.
     let sequenciaId = Number(req.body.sequenciaId) || null;
     if (sequenciaId && !(await podeEditarSequencia(sequenciaId, req.usuario))) sequenciaId = null;
-    try {
-      if (!sequenciaId) sequenciaId = await criarSequencia(dados, (req.files || []).map((f) => f.originalname),
-        req.usuario.id, Number(req.body.turmaId) || null);
-      await salvarEntrega(sequenciaId, req.params.etapa, resultado);
-    } catch (e) {
-      console.error("Falha ao salvar no banco:", e.message);
-    }
-    res.json({ sequenciaId, resultado });
+
+    // Sem banco, gera na hora (modo antigo).
+    if (!sql) return res.json({ sequenciaId, resultado: await executarEtapa(req.params.etapa, dados, anteriores, referencia) });
+
+    if (!sequenciaId) sequenciaId = await criarSequencia(dados, (req.files || []).map((f) => f.originalname), req.usuario.id, turmaId);
+    const [t] = await sql`INSERT INTO trabalhos (usuario_id, sequencia_id, etapa) VALUES (${req.usuario.id}, ${sequenciaId}, ${req.params.etapa}) RETURNING id`;
+    const tarefa = (async () => {
+      try {
+        const resultado = await executarEtapa(req.params.etapa, dados, anteriores, referencia);
+        await salvarEntrega(sequenciaId, req.params.etapa, resultado);
+        await sql`UPDATE trabalhos SET estado = 'ok', atualizado_em = now() WHERE id = ${t.id}`;
+      } catch (e) {
+        console.error(e);
+        await sql`UPDATE trabalhos SET estado = 'erro', erro = ${e.message}, atualizado_em = now() WHERE id = ${t.id}`.catch(() => {});
+      }
+    })();
+    waitUntil(tarefa);
+    res.status(202).json({ sequenciaId, trabalhoId: t.id });
   } catch (e) {
     console.error(e);
     res.status(500).json({ erro: e.message });
   }
+});
+
+app.get("/api/trabalhos/:id", exigeLogin, async (req, res) => {
+  const [t] = await sql`SELECT * FROM trabalhos WHERE id = ${Number(req.params.id)}`;
+  if (!t || (t.usuario_id !== req.usuario.id && !ehGestor(req.usuario))) return res.status(404).json({ erro: "Não encontrado" });
+  // Trabalho parado há mais de 6 min (função encerrada) conta como falha.
+  if (t.estado === "gerando" && Date.now() - new Date(t.criado_em).getTime() > 6 * 60 * 1000)
+    return res.json({ estado: "erro", erro: "A geração demorou demais. Tente de novo." });
+  if (t.estado !== "ok") return res.json({ estado: t.estado, erro: t.erro });
+  const [e] = await sql`SELECT conteudo FROM entregas WHERE sequencia_id = ${t.sequencia_id} AND etapa = ${t.etapa}`;
+  res.json({ estado: "ok", sequenciaId: t.sequencia_id, resultado: e?.conteudo });
 });
 
 const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";

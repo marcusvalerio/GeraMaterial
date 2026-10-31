@@ -492,6 +492,28 @@ function dadosDaUc(base, uc) {
 }
 
 // Gera a fila a partir da UC `inicioUc`, começando na etapa `inicioEtapa` dela.
+// Acompanha o trabalho no servidor. Falhas de rede (app em segundo plano, sinal ruim) não
+// interrompem: continua consultando até o servidor dizer que terminou.
+async function acompanhar(id) {
+  const espera = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  for (;;) {
+    await espera(document.hidden ? 8000 : 4000);
+    let j;
+    try {
+      const r = await fetch(`/api/trabalhos/${id}`, { cache: "no-store" });
+      if (r.status === 401) { location.href = "entrar.html?voltar=index.html"; throw new Error("Sessão expirada"); }
+      if (r.status === 404) throw new Error("Trabalho não encontrado");
+      if (!r.ok) continue;
+      j = await r.json();
+    } catch (e) {
+      if (/Sessão|não encontrado/.test(e.message)) throw e;
+      continue;
+    }
+    if (j.estado === "ok") return j;
+    if (j.estado === "erro") throw new Error(j.erro || "Falha ao gerar");
+  }
+}
+
 async function gerarFila(inicioUc = 0, inicioEtapa = 0) {
   if (gerando || !validar()) return;
   if (!inputArq.files.length && !turmaAtual) avisar("Sem plano de curso, a IA usa só os dados da turma. Funciona, mas fica menos preciso.");
@@ -526,9 +548,15 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0) {
       arquivos.forEach((f) => corpo.append("referencias", f));
       try {
         const r = await fetch(`/api/gerar/${etapa.id}`, { method: "POST", body: corpo });
-        const j = await r.json();
+        let j = await r.json();
         if (r.status === 401) { location.href = "entrar.html?voltar=index.html"; return; }
         if (!r.ok) throw new Error(j.erro || "Falha ao gerar");
+        it.sequenciaId = j.sequenciaId || it.sequenciaId;
+        if (j.trabalhoId) {
+          it.estados[etapa.id].msg = "Escrevendo agora, leva de 1 a 4 minutos. Pode sair do app, continua gerando.";
+          render();
+          j = await acompanhar(j.trabalhoId);
+        }
         it.resultados[etapa.id] = j.resultado;
         it.sequenciaId = j.sequenciaId || it.sequenciaId;
         it.estados[etapa.id] = { tipo: "ok", msg: "Pronto para baixar" };
