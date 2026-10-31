@@ -73,7 +73,24 @@ const lista = (v) => (Array.isArray(v) ? v.join("\n") : v);
 // ---------- PER (Plano de Ensino e Recursos) ----------
 // Posições das células conforme o modelo (blocos mesclados da tabela).
 const PER_DATAS = ["A16", "A19", "A21", "A26", "A30", "A34", "A38", "A43", "A48", "A51", "A55", "A61", "A64", "A68"];
-const PER_CH = ["B16", "B21", "B26", "B30", "B38", "B48", "B51", "B55", "B61", "B64"];
+// Cada célula de CH é mesclada e cobre uma ou duas células de data (conforme o modelo).
+const PER_CH_BLOCOS = [["B16", ["A16", "A19"]], ["B21", ["A21"]], ["B26", ["A26"]], ["B30", ["A30", "A34"]], ["B38", ["A38", "A43"]],
+  ["B48", ["A48"]], ["B51", ["A51"]], ["B55", ["A55"]], ["B61", ["A61"]], ["B64", ["A64", "A68"]]];
+
+const horasNum = (ch) => Number(String(ch ?? "").replace(",", ".").match(/[\d.]+/)?.[0] || 0);
+const fmtHoras = (h) => `${String(Math.round(h * 10) / 10).replace(".", ",")}h`;
+
+// Distribui as aulas nas 14 linhas de data do modelo. Com mais de 14 aulas, junta datas na mesma linha
+// (ex.: "02/12 e 03/12"), para nenhuma aula ficar de fora.
+function distribuirAulas(aulas) {
+  const n = PER_DATAS.length;
+  const grupos = Array.from({ length: Math.min(n, aulas.length) }, () => []);
+  aulas.forEach((a, i) => { grupos[Math.floor((i * grupos.length) / aulas.length)].push(a); });
+  return grupos.map((g) => ({
+    data: g.length === 1 ? g[0].data : g.map((a) => String(a.data).slice(0, 5)).join(" e ") + String(g.at(-1).data).slice(5),
+    horas: g.reduce((s, a) => s + horasNum(a.ch), 0),
+  }));
+}
 const PER_CONHEC = ["F16", "F21", "F26", "F30", "F38", "F48", "F51", "F54", "F55", "F60", "F64", "F68", "F72"];
 
 export function gerarPER(p) {
@@ -96,8 +113,13 @@ export function gerarPER(p) {
     C82: p.avaliacao60?.instrumento, I82: p.avaliacao60?.criterios, A82: p.avaliacao60?.data,
     A85: `Nome do instrutor: ${p.instrutor ?? ""}`,
   };
-  (p.aulas || []).slice(0, PER_DATAS.length).forEach((a, i) => { v[PER_DATAS[i]] = a.data; });
-  (p.aulas || []).slice(0, PER_CH.length).forEach((a, i) => { v[PER_CH[i]] = a.ch; });
+  const linhas = distribuirAulas(p.aulas || []);
+  const porCelula = Object.fromEntries(linhas.map((l, i) => [PER_DATAS[i], l]));
+  for (const [ref, l] of Object.entries(porCelula)) v[ref] = l.data;
+  for (const [refCh, refsData] of PER_CH_BLOCOS) {
+    const h = refsData.reduce((s, r) => s + (porCelula[r]?.horas || 0), 0);
+    if (h) v[refCh] = fmtHoras(h);
+  }
   const conh = p.conhecimentos || [];
   // Se houver mais conhecimentos que blocos, o último bloco recebe o restante.
   PER_CONHEC.forEach((ref, i) => {

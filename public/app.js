@@ -1,4 +1,5 @@
 import { montarCronograma, cronogramaDaUc, lerDiasSemAula, dataBr } from "./cronograma.js";
+import { iniciarPagina } from "./comum.js";
 
 // Sequência padrão: cada etapa usa o resultado das anteriores.
 const ETAPAS = [
@@ -29,6 +30,7 @@ const nomeArquivo = (t) => String(t || "").replace(/[\\/:*?"<>|]/g, "").slice(0,
 // Estado: o plano de curso lido e a fila de UCs a gerar (cada UC tem sua própria sequência).
 let analise = null; // { curso, cargaHoraria, modalidade, ucs: [...] }
 let crono = null; // cronograma calculado a partir das cargas horárias
+let turmaAtual = null; // turma salva: { id, nome }
 let fila = [novoItem()];
 let atual = 0;
 let gerando = false;
@@ -246,8 +248,12 @@ function calcularCronograma() {
       <strong title="${esc(x.rotulo)}">${esc(x.rotulo)}</strong><span>${x.aulas} aulas · ${x.horas}h</span></div>`).join("")}</div>
     ${crono.pulados.length ? `<details class="crono-pulados"><summary>${crono.pulados.length} ${crono.pulados.length === 1 ? "dia pulado" : "dias pulados"} (feriados e dias sem aula)</summary>
       <ul>${crono.pulados.map((p) => `<li>${dataBr(p.data)} — ${esc(p.motivo)}</li>`).join("")}</ul></details>` : ""}
-    <div class="crono-acoes"><button type="button" id="btnCrono">Baixar calendário (Excel)</button></div>`;
+    <div class="crono-acoes"><button type="button" id="btnCrono">Baixar calendário (Excel)</button>
+      ${turmaAtual ? `<a class="link-turma" href="turmas.html?id=${turmaAtual.id}">Abrir a turma ${esc(turmaAtual.nome)}</a>`
+        : `<button type="button" id="btnSalvarTurma" class="primario">Salvar como turma</button>`}</div>
+    ${turmaAtual ? "" : `<p class="crono-dica">Salvando a turma, você acompanha o diário, a frequência e as notas, e gera os materiais das próximas UCs sem reenviar o plano.</p>`}`;
   $("#btnCrono").onclick = baixarCronograma;
+  if ($("#btnSalvarTurma")) $("#btnSalvarTurma").onclick = salvarTurma;
 }
 
 async function baixarCronograma() {
@@ -262,6 +268,74 @@ async function baixarCronograma() {
     meses: crono.meses, pulados: crono.pulados.map((p) => ({ data: dataBr(p.data), motivo: p.motivo })),
   };
   await baixar("cronograma", corpo, `Calendario - ${nomeArquivo(analise.curso)}`);
+}
+
+async function salvarTurma() {
+  if (!crono) return;
+  const form = $("#form");
+  let nome = form.elements.turma.value.trim();
+  if (!nome) {
+    nome = (prompt("Nome da turma (ex.: QUA0250.02 - Noite)") || "").trim();
+    if (!nome) return;
+    form.elements.turma.value = nome;
+  }
+  let n = 0;
+  const aulas = crono.ucs.flatMap((u) => u.aulas.map((a, i) => ({ uc: u.nome, numero: ++n, numero_uc: i + 1, data: dataBr(a.data), ch: a.ch })));
+  const dados = {
+    analise: { ...analise, referencia: undefined }, referencia: analise.referencia || "",
+    calendario: { inicio: $("#inicioCurso").value, horasAula: $("#horasAula").value, dias: diasEscolhidos(), semAula: $("#semAula").value },
+    turma: { modalidade: form.elements.modalidade.value, segmento: form.elements.segmento.value, recursos: form.elements.recursos.value, dias: form.elements.dias.value },
+  };
+  $("#btnSalvarTurma").disabled = true;
+  try {
+    const r = await fetch("/api/turmas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nome, curso: analise.curso, dados, aulas }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.erro || "Não foi possível salvar a turma.");
+    turmaAtual = { id: j.id, nome };
+    history.replaceState(null, "", `?turma=${j.id}`);
+    mostrarFaixaTurma();
+    calcularCronograma();
+    avisar(`Turma ${nome} salva. Os materiais gerados agora ficam ligados a ela.`);
+  } catch (e) {
+    avisar(e.message, true);
+    if ($("#btnSalvarTurma")) $("#btnSalvarTurma").disabled = false;
+  }
+}
+
+function mostrarFaixaTurma() {
+  const f = $("#faixaTurma");
+  f.hidden = !turmaAtual;
+  if (turmaAtual) f.innerHTML = `Gerando materiais da turma <strong>${esc(turmaAtual.nome)}</strong> · <a href="turmas.html?id=${turmaAtual.id}">abrir a turma</a>`;
+}
+
+// Abre o gerador já com o plano e o calendário de uma turma salva (?turma=ID).
+async function carregarTurma(id) {
+  const r = await fetch(`/api/turmas/${id}`);
+  if (!r.ok) return;
+  const { turma, sequencias } = await r.json();
+  const d = turma.dados || {};
+  if (!d.analise?.ucs?.length) return;
+  turmaAtual = { id: turma.id, nome: turma.nome };
+  analise = { ...d.analise, referencia: d.referencia };
+  const form = $("#form");
+  form.elements.curso.value = turma.curso;
+  form.elements.turma.value = turma.nome;
+  for (const [k, v] of Object.entries(d.turma || {})) if (form.elements[k] && v) form.elements[k].value = v;
+  if (d.calendario) {
+    $("#inicioCurso").value = d.calendario.inicio || "";
+    $("#horasAula").value = d.calendario.horasAula || 4;
+    $("#semAula").value = d.calendario.semAula || "";
+    document.querySelectorAll("#diasSemana input").forEach((c) => { c.checked = (d.calendario.dias || []).includes(Number(c.value)); });
+  }
+  $("#listaArquivos").innerHTML = `<li>Plano de curso da turma ${esc(turma.nome)}</li>`;
+  $("#analise").hidden = false;
+  mostrarAnalise();
+  // Sugere as UCs que ainda não têm materiais.
+  const feitas = new Set(sequencias.map((s) => s.uc));
+  const proxima = analise.ucs.findIndex((u) => !feitas.has(u.nome));
+  if (proxima >= 0) document.querySelector(`input[name=ucEscolhida][value="${proxima}"]`).checked = true;
+  mostrarFaixaTurma();
+  aoEscolherUc();
 }
 
 // ---------- Geração ----------
@@ -299,7 +373,7 @@ function dadosDaUc(base, uc) {
 // Gera a fila a partir da UC `inicioUc`, começando na etapa `inicioEtapa` dela.
 async function gerarFila(inicioUc = 0, inicioEtapa = 0) {
   if (gerando || !validar()) return;
-  if (!inputArq.files.length) avisar("Sem plano de curso, a IA usa só os dados da turma. Funciona, mas fica menos preciso.");
+  if (!inputArq.files.length && !turmaAtual) avisar("Sem plano de curso, a IA usa só os dados da turma. Funciona, mas fica menos preciso.");
   else avisar("");
   const fd = new FormData($("#form"));
   const arquivos = fd.getAll("referencias").filter((f) => f.size);
@@ -327,10 +401,12 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0) {
       corpo.append("dados", JSON.stringify(dados));
       corpo.append("anteriores", JSON.stringify(it.resultados));
       if (it.sequenciaId) corpo.append("sequenciaId", it.sequenciaId);
+      if (turmaAtual) corpo.append("turmaId", turmaAtual.id);
       arquivos.forEach((f) => corpo.append("referencias", f));
       try {
         const r = await fetch(`/api/gerar/${etapa.id}`, { method: "POST", body: corpo });
         const j = await r.json();
+        if (r.status === 401) { location.href = "entrar.html?voltar=index.html"; return; }
         if (!r.ok) throw new Error(j.erro || "Falha ao gerar");
         it.resultados[etapa.id] = j.resultado;
         it.sequenciaId = j.sequenciaId || it.sequenciaId;
@@ -408,6 +484,9 @@ async function abrir(id) {
 
 function limparPlano() {
   analise = null;
+  turmaAtual = null;
+  history.replaceState(null, "", location.pathname);
+  mostrarFaixaTurma();
   crono = null;
   $("#cronograma").innerHTML = "";
   inputArq.value = "";
@@ -450,7 +529,7 @@ function avisar(msg, erro = false) {
 }
 function marcarPassos() {
   const form = $("#form");
-  $("#passo1").classList.toggle("feito", inputArq.files.length > 0 && (!analise || ucsEscolhidas().length > 0));
+  $("#passo1").classList.toggle("feito", (inputArq.files.length > 0 || Boolean(turmaAtual)) && (!analise || ucsEscolhidas().length > 0));
   const campos = analise ? ["curso", "instrutor"] : ["curso", "uc", "instrutor"];
   $("#passo2").classList.toggle("feito", campos.every((n) => form.elements[n].value.trim()));
 }
@@ -466,7 +545,10 @@ const inputArq = $("#arquivos");
 const mostrarArquivos = () => {
   $("#listaArquivos").innerHTML = [...inputArq.files].map((f) => `<li>${esc(f.name)}</li>`).join("");
 };
-const aoTrocarArquivo = () => { mostrarArquivos(); marcarPassos(); analisarPlano(); };
+const aoTrocarArquivo = () => {
+  if (turmaAtual) { turmaAtual = null; history.replaceState(null, "", location.pathname); mostrarFaixaTurma(); }
+  mostrarArquivos(); marcarPassos(); analisarPlano();
+};
 inputArq.onchange = aoTrocarArquivo;
 const up = $("#upload");
 up.ondragover = (e) => { e.preventDefault(); up.classList.add("arrastando"); };
@@ -476,6 +558,14 @@ up.ondrop = (e) => { e.preventDefault(); up.classList.remove("arrastando"); inpu
 ["#inicioCurso", "#horasAula", "#semAula"].forEach((sel) => $(sel).addEventListener("input", calcularCronograma));
 $("#diasSemana").addEventListener("change", calcularCronograma);
 
-aplicarModoUc();
-render();
-carregarHistorico();
+const usuario = await iniciarPagina("gerar");
+if (usuario) {
+  if (!$("#form").elements.instrutor.value) $("#form").elements.instrutor.value = usuario.nome;
+  aplicarModoUc();
+  render();
+  carregarHistorico();
+  const idTurma = new URLSearchParams(location.search).get("turma");
+  if (idTurma) await carregarTurma(Number(idTurma));
+  const idSeq = new URLSearchParams(location.search).get("sequencia");
+  if (idSeq) await abrir(Number(idSeq));
+}

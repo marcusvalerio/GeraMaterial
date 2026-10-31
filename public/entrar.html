@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrar · gera.documento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="tela-entrar">
+<main class="entrar">
+  <a class="marca" href="./"><span class="selo" aria-hidden="true">g.</span><span class="nome">gera<span class="ponto">.</span>documento</span></a>
+  <h1 id="titulo">Entre na sua conta</h1>
+  <p class="entrar-sub" id="subtitulo">Para gerar materiais e acompanhar suas turmas.</p>
+
+  <div class="aviso-caixa" id="pendente" hidden>
+    <strong>Conta criada.</strong> Agora o administrador precisa liberar o seu acesso. Assim que for liberado, é só entrar.
+  </div>
+
+  <form id="form" novalidate>
+    <label id="campoNome" hidden>Nome completo<input name="nome" autocomplete="name"></label>
+    <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+    <label>Senha<input name="senha" type="password" autocomplete="current-password" required minlength="8"></label>
+    <button type="submit" class="btn-gerar" id="btnEnviar">Entrar</button>
+    <p class="aviso" id="aviso" role="alert"></p>
+  </form>
+  <p class="entrar-troca"><span id="trocaTexto">Ainda não tem conta?</span> <button type="button" class="link-todas" id="btnTroca">Criar conta</button></p>
+</main>
+<script type="module">
+import { $, api } from "./comum.js";
+
+const params = new URLSearchParams(location.search);
+let modo = "entrar";
+const form = $("#form");
+
+function aplicarModo() {
+  const cadastro = modo === "cadastro";
+  $("#titulo").textContent = cadastro ? "Crie sua conta" : "Entre na sua conta";
+  $("#subtitulo").textContent = cadastro ? "Depois do cadastro, o administrador libera o seu acesso." : "Para gerar materiais e acompanhar suas turmas.";
+  $("#campoNome").hidden = !cadastro;
+  form.elements.senha.autocomplete = cadastro ? "new-password" : "current-password";
+  $("#btnEnviar").textContent = cadastro ? "Criar conta" : "Entrar";
+  $("#trocaTexto").textContent = cadastro ? "Já tem conta?" : "Ainda não tem conta?";
+  $("#btnTroca").textContent = cadastro ? "Entrar" : "Criar conta";
+  $("#aviso").textContent = "";
+}
+$("#btnTroca").onclick = () => { modo = modo === "entrar" ? "cadastro" : "entrar"; aplicarModo(); };
+
+if (params.get("pendente")) $("#pendente").hidden = false;
+
+form.onsubmit = async (e) => {
+  e.preventDefault();
+  const dados = Object.fromEntries(new FormData(form));
+  $("#btnEnviar").disabled = true;
+  try {
+    const { usuario } = await api(modo === "cadastro" ? "/api/auth/cadastro" : "/api/auth/entrar", { metodo: "POST", corpo: dados });
+    if (!usuario.aprovado) {
+      $("#pendente").hidden = false;
+      $("#aviso").textContent = "";
+      form.reset();
+      modo = "entrar"; aplicarModo();
+      return;
+    }
+    location.href = params.get("voltar") || "index.html";
+  } catch (err) {
+    $("#aviso").textContent = err.message;
+    $("#aviso").classList.add("erro");
+  } finally {
+    $("#btnEnviar").disabled = false;
+  }
+};
+aplicarModo();
+</script>
+</body>
+</html>

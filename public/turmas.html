@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turmas · gera.documento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topo">
+  <a class="marca" href="./" aria-label="gera.documento, início">
+    <span class="selo" aria-hidden="true">g.</span>
+    <span class="nome">gera<span class="ponto">.</span>documento</span>
+  </a>
+  <div class="topo-acoes"><nav class="menu-topo" id="menu" aria-label="Principal"></nav></div>
+</header>
+
+<main class="palco">
+  <!-- Lista de turmas -->
+  <section id="vistaLista" hidden>
+    <div class="cab-pagina">
+      <div>
+        <h1 class="titulo-pagina">Turmas</h1>
+        <p class="sub-pagina">Calendário, diário, frequência, notas e materiais de cada turma.</p>
+      </div>
+      <a class="btn-gerar btn-curto" href="index.html">Nova turma</a>
+    </div>
+    <div class="filtro-gestor" id="filtroGestor" hidden>
+      <label class="alternar"><input type="checkbox" id="verTodas"> Ver turmas de todos os instrutores</label>
+    </div>
+    <div class="cards-turmas" id="listaTurmas"></div>
+  </section>
+
+  <!-- Detalhe da turma -->
+  <section id="vistaTurma" hidden>
+    <a class="voltar" href="turmas.html">← Todas as turmas</a>
+    <div class="cab-pagina">
+      <div>
+        <h1 class="titulo-pagina" id="tNome"></h1>
+        <p class="sub-pagina" id="tSub"></p>
+      </div>
+      <div class="acoes-pagina">
+        <a class="btn-gerar btn-curto" id="tGerar" href="#">Gerar materiais</a>
+        <button type="button" class="btn-secundario" id="tExcluir">Excluir turma</button>
+      </div>
+    </div>
+    <div class="indicadores" id="tIndicadores"></div>
+
+    <div class="abas" role="tablist">
+      <button type="button" role="tab" data-aba="diario" aria-selected="true">Calendário e diário</button>
+      <button type="button" role="tab" data-aba="alunos" aria-selected="false">Alunos e frequência</button>
+      <button type="button" role="tab" data-aba="notas" aria-selected="false">Notas</button>
+      <button type="button" role="tab" data-aba="materiais" aria-selected="false">Materiais</button>
+    </div>
+
+    <div class="aba-corpo" id="aba-diario"></div>
+    <div class="aba-corpo" id="aba-alunos" hidden></div>
+    <div class="aba-corpo" id="aba-notas" hidden></div>
+    <div class="aba-corpo" id="aba-materiais" hidden></div>
+  </section>
+</main>
+
+<!-- Painel lateral de uma aula: diário, chamada e roteiro -->
+<aside class="gaveta gaveta-larga" id="gavetaAula" aria-label="Aula">
+  <div class="gaveta-topo"><h2 id="aTitulo">Aula</h2><button class="fechar" id="aFechar" type="button" aria-label="Fechar">✕</button></div>
+  <p class="sub-pagina" id="aSub"></p>
+  <div class="bloco-aula">
+    <h3>Diário</h3>
+    <label>Conteúdo previsto<textarea id="aPrevisto" rows="2" placeholder="O que está planejado para esta aula"></textarea></label>
+    <label>O que foi dado<textarea id="aDado" rows="3" placeholder="Registre o conteúdo trabalhado, atividades e observações"></textarea></label>
+    <label class="alternar"><input type="checkbox" id="aRealizada"> Aula realizada</label>
+    <button type="button" class="btn-gerar btn-curto" id="aSalvar">Salvar diário</button>
+  </div>
+  <div class="bloco-aula">
+    <h3>Chamada</h3>
+    <div id="aChamada"></div>
+  </div>
+  <div class="bloco-aula">
+    <div class="linha-entre"><h3>Roteiro da aula</h3><button type="button" class="btn-secundario" id="aRoteiro">Gerar roteiro</button></div>
+    <div id="aRoteiroCorpo" class="roteiro"></div>
+  </div>
+  <p class="aviso" id="aAviso" role="status"></p>
+</aside>
+<div class="veu" id="veu" hidden></div>
+
+<script type="module" src="turmas.js"></script>
+</body>
+</html>

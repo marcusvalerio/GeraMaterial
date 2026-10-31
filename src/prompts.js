@@ -117,3 +117,11 @@ cada UC deve aparecer uma única vez, na ordem do curso. JSON:
   "competenciaGeral": "texto da competência geral",
   "ucs": [ { "nome": "Fundamentos de Logística", "cargaHoraria": "20h", "modulo": "Básico", "objetivo": "objetivo geral da UC (resumido)" } ] }
 Se o documento não for um plano de curso, devolva { "curso": "", "ucs": [] }.`;
+
+// Roteiro de uma aula específica do calendário.
+export const ROTEIRO = `Elabore o ROTEIRO desta aula específica, coerente com o que já foi dado nas aulas anteriores (diário)
+e com o PER/plano da UC, se houver. Distribua o tempo total da aula entre os momentos. JSON:
+{ "tema": "tema da aula em uma frase", "objetivos": ["2 a 4 objetivos"],
+  "momentos": [ { "tempo": "20 min", "titulo": "Abertura", "docente": "o que o docente faz", "alunos": "o que os alunos fazem", "recursos": "" } ],
+  "atividade": "atividade principal da aula", "avaliacao": "como verificar a aprendizagem nesta aula",
+  "materiais": ["materiais e recursos"], "tarefa": "tarefa ou preparação para a próxima aula (opcional)" }`;

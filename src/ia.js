@@ -105,3 +105,21 @@ export async function perguntar(system, usuario) {
   }
   return texto;
 }
+
+// Pede uma resposta em JSON. Se a IA devolver um JSON quebrado (acontece com os modelos gratuitos),
+// pede de novo até 2 vezes antes de desistir.
+export async function perguntarJson(system, usuario, tentativas = 3) {
+  let ultimo;
+  for (let i = 0; i < tentativas; i++) {
+    const texto = await perguntar(system, usuario);
+    const ini = texto.indexOf("{"), fim = texto.lastIndexOf("}");
+    try {
+      if (ini < 0 || fim < 0) throw new SyntaxError("sem JSON");
+      return JSON.parse(texto.slice(ini, fim + 1));
+    } catch (e) {
+      ultimo = e;
+      console.warn(`JSON inválido da IA (tentativa ${i + 1}):`, e.message);
+    }
+  }
+  throw new Error(`A IA devolveu uma resposta incompleta. Tente de novo. (${ultimo?.message})`);
+}

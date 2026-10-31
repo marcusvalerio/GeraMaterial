@@ -3,7 +3,7 @@ import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
 import { extractText } from "unpdf";
-import { perguntar, provedorAtivo } from "./ia.js";
+import { perguntarJson, provedorAtivo } from "./ia.js";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto } from "./prompts.js";
@@ -11,13 +11,17 @@ import { gerarDocx, gerarPdf } from "./exportar.js";
 import { gerarSlides } from "./slides.js";
 import { gerarCronograma } from "./cronograma.js";
 import { gerarPER, gerarEP190 } from "./planilhas.js";
-import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, bancoAtivo } from "./db.js";
+import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, podeEditarSequencia, bancoAtivo } from "./db.js";
+import { carregarUsuario, exigeLogin, rotasAuth, ehGestor } from "./auth.js";
+import { sql } from "./db.js";
+import { rotasTurmas } from "./turmas.js";
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 const raiz = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(express.json({ limit: "5mb" }));
+app.use(carregarUsuario);
 app.use(express.static(path.join(raiz, "..", "public")));
 
 function extrairJson(texto) {
@@ -42,14 +46,14 @@ async function textoReferencias(arquivos) {
 }
 
 // Lê o plano de curso enviado e devolve o curso e a lista de unidades curriculares.
-app.post("/api/analisar", upload.array("referencias"), async (req, res) => {
+app.post("/api/analisar", exigeLogin, upload.array("referencias"), async (req, res) => {
   try {
     if (!req.files?.length) return res.status(400).json({ erro: "Envie o plano de curso para identificar as unidades curriculares." });
     const texto = await textoReferencias(req.files);
     if (texto.replace(/DOCUMENTO DE REFERÊNCIA \([^)]*\):/g, "").trim().length < 200) {
       return res.status(422).json({ erro: "Não foi possível ler o texto do arquivo. Se for um PDF escaneado (imagem), envie a versão em Word ou um PDF com texto." });
     }
-    const r = extrairJson(await perguntar(SISTEMA, `${texto}\n\nTAREFA: ${ANALISE}`));
+    const r = await perguntarJson(SISTEMA, `${texto}\n\nTAREFA: ${ANALISE}`);
     // Remove UCs repetidas (o plano costuma listar as UCs mais de uma vez).
     const vistas = new Set();
     r.ucs = (r.ucs || []).filter((u) => {
@@ -58,7 +62,8 @@ app.post("/api/analisar", upload.array("referencias"), async (req, res) => {
       vistas.add(k);
       return true;
     });
-    res.json(r);
+    // O texto lido volta junto para ser guardado na turma (assim não é preciso reenviar o PDF depois).
+    res.json({ ...r, referencia: texto.slice(0, 200000) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ erro: e.message });
@@ -67,7 +72,7 @@ app.post("/api/analisar", upload.array("referencias"), async (req, res) => {
 
 // Gera uma etapa da sequência. Recebe os dados, os documentos de referência e
 // o resultado das etapas anteriores (para manter tudo coerente).
-app.post("/api/gerar/:etapa", upload.array("referencias"), async (req, res) => {
+app.post("/api/gerar/:etapa", exigeLogin, upload.array("referencias"), async (req, res) => {
   try {
     const etapa = ETAPAS[req.params.etapa];
     if (!etapa) return res.status(400).json({ erro: "Etapa inválida" });
@@ -77,9 +82,15 @@ app.post("/api/gerar/:etapa", upload.array("referencias"), async (req, res) => {
     const ctxAnteriores = ORDEM.filter((k) => anteriores[k])
       .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
 
-    const usuario = `${await textoReferencias(req.files)}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
-    const texto = await perguntar(SISTEMA, usuario);
-    const resultado = extrairJson(texto);
+    // Sem arquivo enviado, usa o plano de curso guardado na turma.
+    let referencia = await textoReferencias(req.files);
+    const turmaId = Number(req.body.turmaId) || null;
+    if (!referencia && turmaId && sql) {
+      const [t] = await sql`SELECT usuario_id, dados FROM turmas WHERE id = ${turmaId}`;
+      if (t && (ehGestor(req.usuario) || Number(t.usuario_id) === req.usuario.id)) referencia = t.dados?.referencia || "";
+    }
+    const usuario = `${referencia}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
+    const resultado = await perguntarJson(SISTEMA, usuario);
     // O PER usa as datas do calendário calculado (exatas), não as que a IA sugerir.
     if (req.params.etapa === "per" && Array.isArray(dados.aulasCronograma) && dados.aulasCronograma.length) {
       resultado.aulas = dados.aulasCronograma;
@@ -89,8 +100,10 @@ app.post("/api/gerar/:etapa", upload.array("referencias"), async (req, res) => {
     }
     // Cria o registro da sequência na 1ª etapa e salva cada entrega no histórico.
     let sequenciaId = Number(req.body.sequenciaId) || null;
+    if (sequenciaId && !(await podeEditarSequencia(sequenciaId, req.usuario))) sequenciaId = null;
     try {
-      if (!sequenciaId) sequenciaId = await criarSequencia(dados, (req.files || []).map((f) => f.originalname));
+      if (!sequenciaId) sequenciaId = await criarSequencia(dados, (req.files || []).map((f) => f.originalname),
+        req.usuario.id, Number(req.body.turmaId) || null);
       await salvarEntrega(sequenciaId, req.params.etapa, resultado);
     } catch (e) {
       console.error("Falha ao salvar no banco:", e.message);
@@ -113,7 +126,7 @@ const EXPORTADORES = {
   pptx: [gerarSlides, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
 };
 
-app.post("/api/exportar/:formato", async (req, res) => {
+app.post("/api/exportar/:formato", exigeLogin, async (req, res) => {
   const exp = EXPORTADORES[req.params.formato];
   if (!exp) return res.status(400).json({ erro: "Formato inválido" });
   try {
@@ -129,18 +142,21 @@ app.post("/api/exportar/:formato", async (req, res) => {
   }
 });
 
-app.get("/api/sequencias", async (req, res) => {
-  try { res.json({ banco: bancoAtivo(), itens: await listarSequencias(req.query.busca || "") }); }
+app.get("/api/sequencias", exigeLogin, async (req, res) => {
+  try { res.json({ banco: bancoAtivo(), itens: await listarSequencias(req.query.busca || "", req.usuario) }); }
   catch (e) { res.status(500).json({ erro: e.message }); }
 });
-app.get("/api/sequencias/:id", async (req, res) => {
-  const s = await obterSequencia(Number(req.params.id)).catch(() => null);
+app.get("/api/sequencias/:id", exigeLogin, async (req, res) => {
+  const s = await obterSequencia(Number(req.params.id), req.usuario).catch(() => null);
   s ? res.json(s) : res.status(404).json({ erro: "Não encontrada" });
 });
-app.delete("/api/sequencias/:id", async (req, res) => {
-  await excluirSequencia(Number(req.params.id));
+app.delete("/api/sequencias/:id", exigeLogin, async (req, res) => {
+  await excluirSequencia(Number(req.params.id), req.usuario);
   res.json({ ok: true });
 });
+
+rotasAuth(app);
+rotasTurmas(app);
 
 app.get("/api/ia", (_req, res) => res.json({ provedor: provedorAtivo() }));
 app.get("/api/etapas", (_req, res) => res.json(ORDEM.map((k) => ({ id: k, nome: ETAPAS[k].nome }))));

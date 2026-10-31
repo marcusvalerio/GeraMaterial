@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel · gera.documento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topo">
+  <a class="marca" href="./" aria-label="gera.documento, início">
+    <span class="selo" aria-hidden="true">g.</span>
+    <span class="nome">gera<span class="ponto">.</span>documento</span>
+  </a>
+  <div class="topo-acoes"><nav class="menu-topo" id="menu" aria-label="Principal"></nav></div>
+</header>
+
+<main class="palco">
+  <div class="cab-pagina">
+    <div>
+      <h1 class="titulo-pagina">Painel</h1>
+      <p class="sub-pagina">Andamento das turmas, materiais dos instrutores e acessos ao sistema.</p>
+    </div>
+  </div>
+  <div class="indicadores" id="totais"></div>
+
+  <section class="secao-painel" id="secaoAcessos" hidden>
+    <h2>Acessos</h2>
+    <p class="sub-pagina">Libere as contas novas e defina quem é coordenação. Só o administrador vê esta parte.</p>
+    <div id="acessos"></div>
+  </section>
+
+  <section class="secao-painel">
+    <h2>Turmas</h2>
+    <p class="sub-pagina">As turmas com mais aulas sem registro no diário aparecem primeiro.</p>
+    <div class="tabela-rolagem" id="turmas"></div>
+  </section>
+
+  <section class="secao-painel">
+    <h2>Instrutores</h2>
+    <div class="tabela-rolagem" id="instrutores"></div>
+  </section>
+</main>
+<script type="module">
+import { $, esc, api, iniciarPagina, dataBrIso } from "./comum.js";
+
+const usuario = await iniciarPagina("painel");
+if (usuario && !["admin", "coordenador"].includes(usuario.papel)) location.href = "index.html";
+
+const PAPEIS = { admin: "Administrador", coordenador: "Coordenação", instrutor: "Instrutor(a)" };
+
+async function carregar() {
+  const { instrutores, turmas, totais } = await api("/api/painel");
+  $("#totais").innerHTML = `
+    <div><strong>${totais.instrutores}</strong><span>contas ativas</span></div>
+    <div class="${totais.pendentes ? "atencao" : ""}"><strong>${totais.pendentes}</strong><span>aguardando liberação</span></div>
+    <div><strong>${totais.turmas}</strong><span>turmas</span></div>
+    <div><strong>${totais.materiais_mes}</strong><span>sequências geradas em 30 dias</span></div>`;
+
+  $("#turmas").innerHTML = turmas.length ? `<table class="tabela"><thead><tr><th>Turma</th><th>Instrutor(a)</th><th class="num">Aulas dadas</th>
+    <th class="num">Sem registro</th><th class="num">Alunos</th><th class="num">Frequência</th><th class="num">UCs com material</th><th class="num">Término</th></tr></thead>
+    <tbody>${turmas.map((t) => `<tr>
+      <td><a href="turmas.html?id=${t.id}"><strong>${esc(t.nome)}</strong></a><br><small>${esc(t.curso)}</small></td>
+      <td>${esc(t.instrutor)}</td>
+      <td class="num">${t.realizadas}/${t.aulas}</td>
+      <td class="num ${t.atrasadas > 2 ? "alerta" : t.atrasadas ? "atencao-txt" : ""}">${t.atrasadas}</td>
+      <td class="num">${t.alunos}</td>
+      <td class="num ${t.frequencia !== null && t.frequencia < 75 ? "alerta" : ""}">${t.frequencia === null ? "-" : t.frequencia + "%"}</td>
+      <td class="num">${t.sequencias}</td>
+      <td class="num">${dataBrIso(t.termino)}</td></tr>`).join("")}</tbody></table>`
+    : `<p class="dica-aba">Nenhuma turma criada ainda.</p>`;
+
+  $("#instrutores").innerHTML = `<table class="tabela"><thead><tr><th>Nome</th><th>Papel</th><th class="num">Turmas</th>
+    <th class="num">Sequências geradas</th><th class="num">Aulas sem registro</th><th class="num">Último material</th></tr></thead>
+    <tbody>${instrutores.map((i) => `<tr><td>${esc(i.nome)}<br><small>${esc(i.email)}</small></td><td>${PAPEIS[i.papel]}</td>
+      <td class="num">${i.turmas}</td><td class="num">${i.sequencias}</td>
+      <td class="num ${i.atrasadas > 2 ? "alerta" : ""}">${i.atrasadas}</td>
+      <td class="num">${i.ultimo_material ? new Date(i.ultimo_material).toLocaleDateString("pt-BR") : "-"}</td></tr>`).join("")}</tbody></table>`;
+}
+
+async function carregarAcessos() {
+  if (usuario?.papel !== "admin") return;
+  $("#secaoAcessos").hidden = false;
+  const { itens } = await api("/api/admin/usuarios");
+  $("#acessos").innerHTML = `<table class="tabela"><thead><tr><th>Nome</th><th>E-mail</th><th>Criada em</th><th>Papel</th><th>Acesso</th><th></th></tr></thead>
+    <tbody>${itens.map((u) => {
+      const eu = u.id == usuario.id;
+      return `<tr class="${u.aprovado ? "" : "pendente"}"><td>${esc(u.nome)}${eu ? " <small>(você)</small>" : ""}</td><td>${esc(u.email)}</td>
+      <td>${new Date(u.criado_em).toLocaleDateString("pt-BR")}</td>
+      <td>${eu ? PAPEIS[u.papel] : `<select data-papel="${u.id}" aria-label="Papel de ${esc(u.nome)}">${Object.entries(PAPEIS).map(([k, v]) => `<option value="${k}"${k === u.papel ? " selected" : ""}>${v}</option>`).join("")}</select>`}</td>
+      <td>${eu ? "Liberado" : u.aprovado ? `<button type="button" class="btn-secundario" data-bloquear="${u.id}">Bloquear</button>`
+        : `<button type="button" class="btn-gerar btn-curto" data-liberar="${u.id}">Liberar acesso</button>`}</td>
+      <td>${eu ? "" : `<button type="button" class="link-remover" data-excluir="${u.id}">Excluir</button>`}</td></tr>`;
+    }).join("")}</tbody></table>`;
+  const acao = async (id, corpo) => { try { await api(`/api/admin/usuarios/${id}`, { metodo: "PATCH", corpo }); await Promise.all([carregarAcessos(), carregar()]); } catch (e) { alert(e.message); } };
+  document.querySelectorAll("[data-liberar]").forEach((b) => { b.onclick = () => acao(b.dataset.liberar, { aprovado: true }); });
+  document.querySelectorAll("[data-bloquear]").forEach((b) => { b.onclick = () => confirm("Bloquear o acesso desta conta?") && acao(b.dataset.bloquear, { aprovado: false }); });
+  document.querySelectorAll("[data-papel]").forEach((s) => { s.onchange = () => acao(s.dataset.papel, { papel: s.value }); });
+  document.querySelectorAll("[data-excluir]").forEach((b) => {
+    b.onclick = async () => {
+      if (!confirm("Excluir esta conta? As turmas dela também serão apagadas.")) return;
+      await api(`/api/admin/usuarios/${b.dataset.excluir}`, { metodo: "DELETE" });
+      await Promise.all([carregarAcessos(), carregar()]);
+    };
+  });
+}
+
+if (usuario) await Promise.all([carregar(), carregarAcessos()]);
+</script>
+</body>
+</html>
