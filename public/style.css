@@ -630,3 +630,18 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
   .escolha, .tipos-av { grid-template-columns: minmax(0, 1fr); }
   .campos-av select { font-size: 16px; min-height: 46px; }
 }
+
+/* Cadastro de pessoas e senha provisória (Painel) */
+.form-cadastro { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; margin: 12px 0 16px; }
+.form-cadastro label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
+.caixa-senha { border: 1px solid var(--linha); background: var(--folha); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.caixa-senha code { font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; user-select: all; }
+.caixa-senha button { margin-right: 8px; margin-top: 6px; }
+@media (max-width: 700px) {
+  #acessos table, #acessos tbody, #acessos tr, #acessos td { display: block; width: 100%; }
+  #acessos thead { display: none; }
+  #acessos tr { border: 1px solid var(--linha); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; background: var(--folha); }
+  #acessos tr.pendente { background: #FBF3E2; }
+  #acessos td { border: 0; padding: 3px 0; overflow-wrap: anywhere; }
+  #acessos td:first-child { font-weight: 700; }
+}

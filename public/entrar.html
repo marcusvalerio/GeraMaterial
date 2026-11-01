@@ -24,73 +24,65 @@
   <p class="entrar-sub" id="subtitulo">Para gerar materiais e acompanhar suas turmas.</p>
 
   <div class="aviso-caixa" id="pendente" hidden>
-    <strong>Conta criada.</strong> Agora o administrador precisa liberar o seu acesso. Assim que for liberado, é só entrar.
+    Seu acesso está bloqueado no momento. Fale com o administrador.
   </div>
 
   <form id="form" novalidate>
-    <label id="campoNome" hidden>Nome completo<input name="nome" autocomplete="name"></label>
     <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
-    <label>Senha<input name="senha" type="password" autocomplete="current-password" required minlength="8"></label>
+    <label><span id="rotSenha">Senha</span><input name="senha" type="password" autocomplete="current-password" required minlength="8"></label>
+    <label id="campoConfirma" hidden>Repita a nova senha<input name="confirma" type="password" autocomplete="new-password" minlength="8"></label>
     <button type="submit" class="btn-gerar" id="btnEnviar">Entrar</button>
     <p class="aviso" id="aviso" role="alert"></p>
   </form>
-  <p class="entrar-troca"><span id="trocaTexto">Ainda não tem conta?</span> <button type="button" class="link-todas" id="btnTroca">Criar conta</button></p>
+  <p class="entrar-troca" id="rodapeEntrar">Ainda não tem acesso? Envie seu e-mail ao administrador. Você recebe uma senha provisória para o primeiro acesso.</p>
+  <p class="entrar-troca" id="rodapeNova" hidden><button type="button" class="link-todas" id="btnVoltar">Voltar</button></p>
 </main>
 <script type="module">
 import { $, api } from "./comum.js";
 
 const params = new URLSearchParams(location.search);
-let modo = "entrar";
 const form = $("#form");
+let provisoria = null; // senha provisória digitada, guardada só na memória para a troca
 
 function aplicarModo() {
-  const cadastro = modo === "cadastro";
-  if (modo === "nova") {
-    $("#titulo").textContent = "Crie sua nova senha";
-    $("#subtitulo").textContent = "O administrador liberou a troca de senha desta conta. Escolha uma nova senha (mínimo 8 caracteres) para entrar.";
-    $("#campoNome").hidden = true;
-    form.elements.email.readOnly = true;
-    form.elements.senha.autocomplete = "new-password";
-    $("#btnEnviar").textContent = "Salvar e entrar";
-    $("#trocaTexto").textContent = "Não é você?";
-    $("#btnTroca").textContent = "Voltar";
-    $("#aviso").textContent = "";
-    return;
-  }
-  form.elements.email.readOnly = false;
-  $("#titulo").textContent = cadastro ? "Crie sua conta" : "Entre na sua conta";
-  $("#subtitulo").textContent = cadastro ? "Depois do cadastro, o administrador libera o seu acesso." : "Para gerar materiais e acompanhar suas turmas.";
-  $("#campoNome").hidden = !cadastro;
-  form.elements.senha.autocomplete = cadastro ? "new-password" : "current-password";
-  $("#btnEnviar").textContent = cadastro ? "Criar conta" : "Entrar";
-  $("#trocaTexto").textContent = cadastro ? "Já tem conta?" : "Ainda não tem conta?";
-  $("#btnTroca").textContent = cadastro ? "Entrar" : "Criar conta";
+  const nova = provisoria !== null;
+  $("#titulo").textContent = nova ? "Crie a sua senha" : "Entre na sua conta";
+  $("#subtitulo").textContent = nova ? "Você entrou com a senha provisória. Agora escolha a sua senha (mínimo 8 caracteres)."
+    : "Para gerar materiais e acompanhar suas turmas.";
+  $("#rotSenha").textContent = nova ? "Nova senha" : "Senha";
+  form.elements.email.readOnly = nova;
+  form.elements.senha.autocomplete = nova ? "new-password" : "current-password";
+  $("#campoConfirma").hidden = !nova;
+  $("#btnEnviar").textContent = nova ? "Salvar e entrar" : "Entrar";
+  $("#rodapeEntrar").hidden = nova;
+  $("#rodapeNova").hidden = !nova;
   $("#aviso").textContent = "";
 }
-$("#btnTroca").onclick = () => { modo = modo === "entrar" ? "cadastro" : "entrar"; aplicarModo(); };
+$("#btnVoltar").onclick = () => { provisoria = null; form.reset(); aplicarModo(); };
 
 if (params.get("pendente")) $("#pendente").hidden = false;
 
 form.onsubmit = async (e) => {
   e.preventDefault();
   const dados = Object.fromEntries(new FormData(form));
+  const aviso = (t) => { $("#aviso").textContent = t; $("#aviso").classList.add("erro"); };
+  if (provisoria !== null && dados.senha !== dados.confirma) return aviso("As duas senhas não são iguais.");
   $("#btnEnviar").disabled = true;
   try {
-    const rota = { cadastro: "/api/auth/cadastro", entrar: "/api/auth/entrar", nova: "/api/auth/nova-senha" }[modo];
-    const r = await api(rota, { metodo: "POST", corpo: dados });
-    if (r.novaSenha) { modo = "nova"; aplicarModo(); form.elements.senha.value = ""; form.elements.senha.focus(); return; }
-    const { usuario } = r;
-    if (!usuario.aprovado) {
-      $("#pendente").hidden = false;
-      $("#aviso").textContent = "";
-      form.reset();
-      modo = "entrar"; aplicarModo();
+    const r = provisoria === null
+      ? await api("/api/auth/entrar", { metodo: "POST", corpo: { email: dados.email, senha: dados.senha } })
+      : await api("/api/auth/nova-senha", { metodo: "POST", corpo: { email: dados.email, provisoria, senha: dados.senha } });
+    if (r.novaSenha) {
+      provisoria = dados.senha;
+      form.elements.senha.value = "";
+      aplicarModo();
+      form.elements.senha.focus();
       return;
     }
+    if (!r.usuario.aprovado) { $("#pendente").hidden = false; form.reset(); return; }
     location.href = params.get("voltar") || "inicio.html";
   } catch (err) {
-    $("#aviso").textContent = err.message;
-    $("#aviso").classList.add("erro");
+    aviso(err.message);
   } finally {
     $("#btnEnviar").disabled = false;
   }

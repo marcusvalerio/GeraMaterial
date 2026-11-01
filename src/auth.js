@@ -19,26 +19,34 @@ function confereSenha(senha, guardado) {
 }
 
 const assinar = (txt) => crypto.createHmac("sha256", SEGREDO).update(txt).digest("base64url");
-function criarToken(id) {
-  const corpo = `${id}.${Date.now() + DURACAO_MS}`;
+function criarToken(id, versao = 0) {
+  const corpo = `${id}.${versao}.${Date.now() + DURACAO_MS}`;
   return `${corpo}.${assinar(corpo)}`;
 }
+// Devolve { id, versao }. Tokens antigos (sem versão) contam como versão 0.
 function lerToken(token) {
-  const [id, exp, sig] = String(token || "").split(".");
+  const partes = String(token || "").split(".");
+  if (partes.length === 3) partes.splice(1, 0, null);
+  const [id, ver, exp, sig] = partes;
   if (!id || !exp || !sig) return null;
-  const esperado = assinar(`${id}.${exp}`);
+  const esperado = assinar(ver === null ? `${id}.${exp}` : `${id}.${ver}.${exp}`);
   if (sig.length !== esperado.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(esperado))) return null;
   if (Number(exp) < Date.now()) return null;
-  return Number(id);
+  return { id: Number(id), versao: Number(ver || 0) };
+}
+// Senha provisória legível (sem 0/O, 1/l).
+export function senhaProvisoria() {
+  const a = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  return Array.from(crypto.randomBytes(10), (b) => a[b % a.length]).join("");
 }
 
 function lerCookie(req, nome) {
   const m = (req.headers.cookie || "").split(/;\s*/).find((c) => c.startsWith(`${nome}=`));
   return m ? decodeURIComponent(m.slice(nome.length + 1)) : null;
 }
-function gravarSessao(res, id) {
+function gravarSessao(res, id, versao = 0) {
   const seguro = process.env.VERCEL ? "; Secure" : "";
-  res.setHeader("Set-Cookie", `${COOKIE}=${criarToken(id)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${DURACAO_MS / 1000}${seguro}`);
+  res.setHeader("Set-Cookie", `${COOKIE}=${criarToken(id, versao)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${DURACAO_MS / 1000}${seguro}`);
 }
 function limparSessao(res) {
   res.setHeader("Set-Cookie", `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
@@ -50,11 +58,12 @@ export const ehGestor = (u) => u && (u.papel === "admin" || u.papel === "coorden
 // Carrega o usuário da sessão em req.usuario (ou null).
 export async function carregarUsuario(req, _res, next) {
   req.usuario = null;
-  const id = lerToken(lerCookie(req, COOKIE));
-  if (id && sql) {
+  const t = lerToken(lerCookie(req, COOKIE));
+  if (t && sql) {
     try {
-      const [u] = await sql`SELECT id, nome, email, papel, aprovado FROM usuarios WHERE id = ${id}`;
-      if (u) req.usuario = publico(u);
+      const [u] = await sql`SELECT id, nome, email, papel, aprovado, nova_senha, sessao_versao FROM usuarios WHERE id = ${t.id}`;
+      // Senha revogada pelo administrador (versão mudou) ou ainda provisória: sessão não vale.
+      if (u && Number(u.sessao_versao) === t.versao && !u.nova_senha) req.usuario = publico(u);
     } catch (e) { console.error("sessão:", e.message); }
   }
   next();
@@ -85,8 +94,9 @@ export function rotasAuth(app) {
       if (!nome || !emailValido(email)) return res.status(400).json({ erro: "Informe seu nome e um e-mail válido." });
       if (senha.length < 8) return res.status(400).json({ erro: "A senha precisa ter pelo menos 8 caracteres." });
       const [{ total }] = await sql`SELECT count(*)::int AS total FROM usuarios`;
-      // O primeiro cadastro vira o administrador, já liberado.
+      // Só o primeiro cadastro é livre (vira o administrador). Os demais são criados pelo administrador.
       const primeiro = total === 0;
+      if (!primeiro) return res.status(403).json({ erro: "O cadastro é feito pelo administrador. Envie seu e-mail para ele e você recebe uma senha provisória." });
       const [u] = await sql`
         INSERT INTO usuarios (nome, email, senha_hash, papel, aprovado)
         VALUES (${nome}, ${email}, ${hashSenha(senha)}, ${primeiro ? "admin" : "instrutor"}, ${primeiro})
@@ -101,26 +111,29 @@ export function rotasAuth(app) {
     try {
       const email = String(req.body.email || "").trim().toLowerCase();
       const [u] = await sql`SELECT * FROM usuarios WHERE email = ${email}`;
-      // O administrador liberou a criação de uma nova senha para esta conta.
-      if (u?.nova_senha) return res.json({ novaSenha: true });
       if (!u || !confereSenha(String(req.body.senha || ""), u.senha_hash)) {
         return res.status(401).json({ erro: "E-mail ou senha incorretos." });
       }
-      gravarSessao(res, u.id);
+      // Entrou com a senha provisória: precisa criar a própria senha antes de usar.
+      if (u.nova_senha) return res.json({ novaSenha: true });
+      gravarSessao(res, u.id, Number(u.sessao_versao));
       res.json({ usuario: publico(u) });
     } catch (e) { console.error(e); res.status(500).json({ erro: e.message }); }
   });
 
-  // Só funciona para contas que o administrador marcou com "Nova senha" (vale uma vez).
+  // Troca a senha provisória pela senha da pessoa (exige a provisória correta).
   app.post("/api/auth/nova-senha", async (req, res) => {
     try {
       const email = String(req.body.email || "").trim().toLowerCase();
       const senha = String(req.body.senha || "");
       if (senha.length < 8) return res.status(400).json({ erro: "A senha precisa ter pelo menos 8 caracteres." });
+      const [atual] = await sql`SELECT * FROM usuarios WHERE email = ${email}`;
+      if (!atual || !atual.nova_senha || !confereSenha(String(req.body.provisoria || ""), atual.senha_hash))
+        return res.status(403).json({ erro: "Senha provisória inválida. Peça uma nova ao administrador." });
+      if (senha === req.body.provisoria) return res.status(400).json({ erro: "Escolha uma senha diferente da provisória." });
       const [u] = await sql`UPDATE usuarios SET senha_hash = ${hashSenha(senha)}, nova_senha = false
-        WHERE email = ${email} AND nova_senha RETURNING id, nome, email, papel, aprovado`;
-      if (!u) return res.status(403).json({ erro: "Esta conta não está liberada para criar nova senha. Fale com o administrador." });
-      gravarSessao(res, u.id);
+        WHERE id = ${atual.id} RETURNING id, nome, email, papel, aprovado, sessao_versao`;
+      gravarSessao(res, u.id, Number(u.sessao_versao));
       res.json({ usuario: publico(u) });
     } catch (e) { console.error(e); res.status(500).json({ erro: e.message }); }
   });
@@ -137,6 +150,31 @@ export function rotasAuth(app) {
     const itens = await sql`SELECT id, nome, email, papel, aprovado, nova_senha, criado_em FROM usuarios ORDER BY aprovado, criado_em DESC`;
     res.json({ itens });
   });
+  // Cadastra uma pessoa e devolve a senha provisória (mostrada só uma vez ao administrador).
+  app.post("/api/admin/usuarios", exigeLogin, exigeAdmin, async (req, res) => {
+    try {
+      const nome = String(req.body.nome || "").trim();
+      const email = String(req.body.email || "").trim().toLowerCase();
+      const papel = ["admin", "coordenador", "instrutor"].includes(req.body.papel) ? req.body.papel : "instrutor";
+      if (!nome || !emailValido(email)) return res.status(400).json({ erro: "Informe o nome e um e-mail válido." });
+      const senha = senhaProvisoria();
+      const [u] = await sql`
+        INSERT INTO usuarios (nome, email, senha_hash, papel, aprovado, nova_senha)
+        VALUES (${nome}, ${email}, ${hashSenha(senha)}, ${papel}, true, true)
+        ON CONFLICT (email) DO NOTHING RETURNING id, nome, email, papel, aprovado`;
+      if (!u) return res.status(409).json({ erro: "Já existe uma conta com este e-mail. Use \"Nova senha provisória\" na lista." });
+      res.json({ usuario: publico(u), senha });
+    } catch (e) { console.error(e); res.status(500).json({ erro: e.message }); }
+  });
+  // Revoga a senha atual (e as sessões abertas) e gera uma nova provisória.
+  app.post("/api/admin/usuarios/:id/senha", exigeLogin, exigeAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (id === req.usuario.id) return res.status(400).json({ erro: "Para a sua própria conta, use outra conta de administrador." });
+    const senha = senhaProvisoria();
+    const [u] = await sql`UPDATE usuarios SET senha_hash = ${hashSenha(senha)}, nova_senha = true, aprovado = true,
+      sessao_versao = sessao_versao + 1 WHERE id = ${id} RETURNING id, nome, email`;
+    u ? res.json({ usuario: u, senha }) : res.status(404).json({ erro: "Conta não encontrada." });
+  });
   app.patch("/api/admin/usuarios/:id", exigeLogin, exigeAdmin, async (req, res) => {
     const id = Number(req.params.id);
     if (id === req.usuario.id) return res.status(400).json({ erro: "Você não pode alterar a sua própria conta por aqui." });
@@ -145,6 +183,7 @@ export function rotasAuth(app) {
     const [u] = await sql`
       UPDATE usuarios SET
         aprovado = COALESCE(${typeof aprovado === "boolean" ? aprovado : null}::boolean, aprovado),
+        sessao_versao = sessao_versao + ${aprovado === false ? 1 : 0},
         papel = COALESCE(${papel || null}, papel),
         nova_senha = COALESCE(${typeof novaSenha === "boolean" ? novaSenha : null}::boolean, nova_senha)
       WHERE id = ${id} RETURNING id, nome, email, papel, aprovado`;

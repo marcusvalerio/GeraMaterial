@@ -31,7 +31,14 @@
 
   <section class="secao-painel" id="secaoAcessos" hidden>
     <h2>Acessos</h2>
-    <p class="sub-pagina">Libere as contas novas e defina quem é coordenação. Só o administrador vê esta parte.</p>
+    <p class="sub-pagina">Cadastre quem vai usar o sistema e envie a senha provisória. No primeiro acesso a pessoa cria a própria senha. Só o administrador vê esta parte.</p>
+    <form class="form-cadastro" id="formCadastro">
+      <label>Nome<input name="nome" required autocomplete="off"></label>
+      <label>E-mail<input name="email" type="email" required autocomplete="off"></label>
+      <label>Papel<select name="papel"><option value="instrutor">Instrutor</option><option value="coordenador">Coordenação</option><option value="admin">Administrador</option></select></label>
+      <button type="submit" class="btn-gerar btn-curto">Cadastrar</button>
+    </form>
+    <div class="caixa-senha" id="caixaSenha" hidden></div>
     <div id="acessos"></div>
   </section>
 
@@ -83,6 +90,34 @@ async function carregar() {
       <td class="num">${i.ultimo_material ? new Date(i.ultimo_material).toLocaleDateString("pt-BR") : "-"}</td></tr>`).join("")}</tbody></table>`;
 }
 
+// Mostra a senha provisória uma única vez, com a mensagem pronta para enviar.
+function mostrarSenha(nome, email, senha) {
+  const msg = `Olá, ${nome}! Seu acesso ao gera.documento está pronto.\nSite: ${location.origin}\nE-mail: ${email}\nSenha provisória: ${senha}\nNo primeiro acesso você cria a sua própria senha.`;
+  const c = $("#caixaSenha");
+  c.hidden = false;
+  c.innerHTML = `<p><strong>Senha provisória de ${esc(nome)}:</strong> <code>${esc(senha)}</code></p>
+    <p class="sub-pagina">Ela aparece só agora. Copie e envie para a pessoa.</p>
+    <button type="button" class="btn-gerar btn-curto" id="copiarSenha">Copiar mensagem</button>
+    <button type="button" class="btn-secundario" id="fecharSenha">Fechar</button>`;
+  $("#copiarSenha").onclick = async () => {
+    try { await navigator.clipboard.writeText(msg); $("#copiarSenha").textContent = "Copiado"; }
+    catch { prompt("Copie a mensagem:", msg); }
+  };
+  $("#fecharSenha").onclick = () => { c.hidden = true; c.innerHTML = ""; };
+  c.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+$("#formCadastro").onsubmit = async (e) => {
+  e.preventDefault();
+  const f = e.target, dados = Object.fromEntries(new FormData(f));
+  try {
+    const r = await api("/api/admin/usuarios", { metodo: "POST", corpo: dados });
+    f.reset();
+    mostrarSenha(r.usuario.nome, r.usuario.email, r.senha);
+    await Promise.all([carregarAcessos(), carregar()]);
+  } catch (err) { alert(err.message); }
+};
+
 async function carregarAcessos() {
   if (usuario?.papel !== "admin") return;
   $("#secaoAcessos").hidden = false;
@@ -95,12 +130,21 @@ async function carregarAcessos() {
       <td>${eu ? PAPEIS[u.papel] : `<select data-papel="${u.id}" aria-label="Papel de ${esc(u.nome)}">${Object.entries(PAPEIS).map(([k, v]) => `<option value="${k}"${k === u.papel ? " selected" : ""}>${v}</option>`).join("")}</select>`}</td>
       <td>${eu ? "Liberado" : u.aprovado ? `<button type="button" class="btn-secundario" data-bloquear="${u.id}">Bloquear</button>`
         : `<button type="button" class="btn-gerar btn-curto" data-liberar="${u.id}">Liberar acesso</button>`}</td>
-      <td>${eu ? "" : u.nova_senha ? `<small>Aguardando nova senha</small> ` : `<button type="button" class="link-todas" data-novasenha="${u.id}" title="Na próxima vez que entrar, a pessoa cria uma nova senha">Nova senha</button> `}${eu ? "" : `<button type="button" class="link-remover" data-excluir="${u.id}">Excluir</button>`}</td></tr>`;
+      <td>${eu ? "" : `${u.nova_senha ? `<small>Primeiro acesso pendente</small><br>` : ""}<button type="button" class="link-todas" data-novasenha="${u.id}" data-nome="${esc(u.nome)}" data-email="${esc(u.email)}">Nova senha provisória</button> `}${eu ? "" : `<button type="button" class="link-remover" data-excluir="${u.id}">Excluir</button>`}</td></tr>`;
     }).join("")}</tbody></table>`;
   const acao = async (id, corpo) => { try { await api(`/api/admin/usuarios/${id}`, { metodo: "PATCH", corpo }); await Promise.all([carregarAcessos(), carregar()]); } catch (e) { alert(e.message); } };
   document.querySelectorAll("[data-liberar]").forEach((b) => { b.onclick = () => acao(b.dataset.liberar, { aprovado: true }); });
   document.querySelectorAll("[data-bloquear]").forEach((b) => { b.onclick = () => confirm("Bloquear o acesso desta conta?") && acao(b.dataset.bloquear, { aprovado: false }); });
-  document.querySelectorAll("[data-novasenha]").forEach((b) => { b.onclick = () => confirm("Liberar esta pessoa para criar uma nova senha? Na próxima vez que ela digitar o e-mail para entrar, o site pede a nova senha.") && acao(b.dataset.novasenha, { novaSenha: true }); });
+  document.querySelectorAll("[data-novasenha]").forEach((b) => {
+    b.onclick = async () => {
+      if (!confirm(`Revogar a senha atual de ${b.dataset.nome} e gerar uma nova senha provisória? A pessoa sai de todos os aparelhos.`)) return;
+      try {
+        const r = await api(`/api/admin/usuarios/${b.dataset.novasenha}/senha`, { metodo: "POST" });
+        mostrarSenha(b.dataset.nome, b.dataset.email, r.senha);
+        await carregarAcessos();
+      } catch (e) { alert(e.message); }
+    };
+  });
   document.querySelectorAll("[data-papel]").forEach((s) => { s.onchange = () => acao(s.dataset.papel, { papel: s.value }); });
   document.querySelectorAll("[data-excluir]").forEach((b) => {
     b.onclick = async () => {
