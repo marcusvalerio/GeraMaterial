@@ -156,8 +156,8 @@ export function cronogramaDaUc(crono, nomeUc, periodo = null) {
   let minhas = u.aulas.map((a, i) => ({ ...a, n: i + 1 })).filter((a) => noPeriodo(a.data, periodo));
   let noMapao = false;
   // A UC não cai no período pela sequência calculada: o período informado é quando ela acontece.
-  if (!minhas.length && periodo?.de) {
-    minhas = aulasNoPeriodo(crono.cfg, u, periodo).map((a, i) => ({ ...a, n: i + 1 }));
+  if (!minhas.length && periodo) {
+    minhas = aulasNoPeriodo(crono.cfg, u, { de: periodo.de || crono.inicio, ate: periodo.ate }).map((a, i) => ({ ...a, n: i + 1 }));
     noMapao = true;
   }
   if (!minhas.length) return { vazio: true, total };

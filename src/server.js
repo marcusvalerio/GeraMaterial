@@ -186,6 +186,9 @@ app.delete("/api/sequencias/:id", exigeLogin, async (req, res) => {
 rotasAuth(app);
 rotasTurmas(app);
 
+// Versão publicada: o app recarrega sozinho quando muda (evita ficar com código antigo aberto).
+const VERSAO = process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now());
+app.get("/api/versao", (_req, res) => { res.setHeader("Cache-Control", "no-store"); res.json({ versao: VERSAO }); });
 app.get("/api/ia", (_req, res) => res.json({ provedor: provedorAtivo() }));
 app.get("/api/etapas", (_req, res) => res.json(ORDEM.map((k) => ({ id: k, nome: ETAPAS[k].nome }))));
 

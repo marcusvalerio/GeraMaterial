@@ -484,11 +484,6 @@ function validar() {
     $("#passoAval").scrollIntoView({ behavior: "smooth", block: "center" });
     return false;
   }
-  if (analise && crono && periodo() && ucsEscolhidas().every((u) => cronogramaDaUc(crono, u.nome, periodo())?.vazio)) {
-    avisar("Nenhuma das UCs escolhidas tem aula sua no período informado. Confira as datas.", true);
-    $("#passoCal").scrollIntoView({ behavior: "smooth", block: "center" });
-    return false;
-  }
   if (analise && !crono) {
     avisar("Preencha o calendário da turma (início do curso, horas por aula e dias de aula).", true);
     $("#passoCal").scrollIntoView({ behavior: "smooth", block: "center" });

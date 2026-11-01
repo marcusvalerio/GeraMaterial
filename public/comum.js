@@ -81,3 +81,15 @@ export async function iniciarPagina(atual) {
   document.body.classList.add("pronto", "com-abas");
   return usuario;
 }
+
+// Atualização automática: ao voltar para o app, se saiu versão nova e nada está sendo gerado, recarrega.
+let versaoAtual = null;
+async function conferirVersao() {
+  try {
+    const { versao } = await (await fetch("/api/versao", { cache: "no-store" })).json();
+    if (versaoAtual && versao !== versaoAtual && !document.querySelector(".etapa.gerando")) location.reload();
+    versaoAtual = versao;
+  } catch {}
+}
+conferirVersao();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) conferirVersao(); });
