@@ -153,20 +153,28 @@ async function analisarPlano() {
   if (!arquivos.length) { caixa.hidden = true; return; }
   caixa.hidden = false;
   caixa.className = "analise lendo";
-  caixa.textContent = "Lendo o plano de curso e identificando as unidades curriculares…";
+  caixa.textContent = "Lendo o plano de curso e identificando as unidades curriculares. Leva alguns segundos…";
   const corpo = new FormData();
   arquivos.forEach((f) => corpo.append("referencias", f));
   try {
-    const r = await fetch("/api/analisar", { method: "POST", body: corpo });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.erro || "Falha ao ler o plano de curso");
+    let r, j;
+    try {
+      r = await fetch("/api/analisar", { method: "POST", body: corpo });
+      // Resposta que não é JSON = o servidor caiu ou a conexão foi cortada (ex.: app em segundo plano).
+      j = await r.json().catch(() => { throw new Error("O servidor não respondeu direito desta vez. Toque em Tentar de novo."); });
+    } catch (e) {
+      throw new Error(/Toque/.test(e.message) ? e.message : "A conexão caiu durante a leitura. Confira a internet e toque em Tentar de novo.");
+    }
+    if (r.status === 401) { location.href = "entrar.html?voltar=index.html"; return; }
+    if (!r.ok) throw new Error(j.erro || "Não foi possível ler o plano de curso. Toque em Tentar de novo.");
     if (!j.ucs?.length) throw new Error("Não encontramos unidades curriculares neste arquivo. Confira se é o plano de curso ou preencha a UC manualmente no passo 2.");
     analise = j;
     mostrarAnalise();
     calcularCronograma();
   } catch (e) {
     caixa.className = "analise erro";
-    caixa.textContent = e.message;
+    caixa.innerHTML = `<p>${esc(e.message)}</p><button type="button" class="btn-secundario" id="btnReler">Tentar de novo</button>`;
+    $("#btnReler").onclick = analisarPlano;
   }
   aplicarModoUc();
   if (passo === 0) {
@@ -512,6 +520,7 @@ function errosDoPasso(id) {
   if (id === "passo1") {
     if ($("#analise").classList.contains("lendo")) return "Aguarde: ainda estamos lendo o plano de curso.";
     if (analise && !ucsEscolhidas().length) return "Escolha pelo menos uma unidade curricular.";
+    if (inputArq.files.length && !analise) return "Não conseguimos ler o plano de curso. Toque em Tentar de novo, logo acima.";
   }
   if (id === "passo2") {
     const faltando = [...$("#passo2").querySelectorAll("[required]")].filter((el) => !el.closest("[hidden]") && !el.value.trim());

@@ -24,7 +24,10 @@ export function provedorAtivo() {
 }
 
 // system: texto; usuario: texto. Retorna o texto da resposta.
-export async function perguntar(system, usuario) {
+// opcoes.rapido: tarefas simples de leitura (ex.: listar as UCs do plano) usam os modelos "lite",
+// que respondem em ~2 s em vez de ~2 min, com a mesma exatidão para copiar dados do documento.
+const RAPIDOS = ["gemini-flash-lite-latest", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
+export async function perguntar(system, usuario, opcoes = {}) {
   const nome = provedorAtivo();
   if (!nome) throw new Error("Nenhuma IA configurada. Defina GEMINI_API_KEY, GROQ_API_KEY ou OPENROUTER_API_KEY no .env.");
 
@@ -48,7 +51,8 @@ export async function perguntar(system, usuario) {
   // IAs gratuitas às vezes respondem "ocupado" (503) ou "limite" (429): tenta de novo com espera crescente.
   // A resposta vem em streaming para a conexão não ficar parada (respostas longas passam de 5 min).
   let r, j = {};
-  const modelos = process.env.AI_MODEL ? [process.env.AI_MODEL] : [p.modelo, ...(p.reservas || [])];
+  const modelos = process.env.AI_MODEL ? [process.env.AI_MODEL]
+    : opcoes.rapido && nome === "gemini" ? [...RAPIDOS, p.modelo] : [p.modelo, ...(p.reservas || [])];
   let m = 0;
   try {
   for (let tentativa = 0; tentativa < 4 + modelos.length; tentativa++) {
@@ -109,10 +113,10 @@ export async function perguntar(system, usuario) {
 
 // Pede uma resposta em JSON. Se a IA devolver um JSON quebrado (acontece com os modelos gratuitos),
 // pede de novo até 2 vezes antes de desistir.
-export async function perguntarJson(system, usuario, tentativas = 3) {
+export async function perguntarJson(system, usuario, tentativas = 3, opcoes = {}) {
   let ultimo;
   for (let i = 0; i < tentativas; i++) {
-    const texto = await perguntar(system, usuario);
+    const texto = await perguntar(system, usuario, opcoes);
     const ini = texto.indexOf("{"), fim = texto.lastIndexOf("}");
     try {
       if (ini < 0 || fim < 0) throw new SyntaxError("sem JSON");

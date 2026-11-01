@@ -56,7 +56,7 @@ app.post("/api/analisar", exigeLogin, upload.array("referencias"), async (req, r
     if (texto.replace(/DOCUMENTO DE REFERÊNCIA \([^)]*\):/g, "").trim().length < 200) {
       return res.status(422).json({ erro: "Não foi possível ler o texto do arquivo. Se for um PDF escaneado (imagem), envie a versão em Word ou um PDF com texto." });
     }
-    const r = await perguntarJson(SISTEMA, `${texto}\n\nTAREFA: ${ANALISE}`);
+    const r = await perguntarJson(SISTEMA, `${texto}\n\nTAREFA: ${ANALISE}`, 3, { rapido: true });
     // Remove UCs repetidas (o plano costuma listar as UCs mais de uma vez).
     const vistas = new Set();
     r.ucs = (r.ucs || []).filter((u) => {
