@@ -10,12 +10,16 @@ const ETAPAS = [
   { id: "slides", nome: "Slides da aula", formato: "PowerPoint",
     downloads: (r) => [["Baixar slides", "pptx", r, r.titulo || "Slides"]] },
   { id: "avaliacao", nome: "Avaliações 30 e 60 pontos", formato: "Word e PDF",
-    downloads: (r) => [
-      ["Avaliação 30 · Word", "docx", r.avaliacao30, "Avaliacao 30 pontos"],
-      ["Avaliação 60 · Word", "docx", r.avaliacao60, "Avaliacao 60 pontos"],
-      ["30 · PDF", "pdf", r.avaliacao30, "Avaliacao 30 pontos", true],
-      ["60 · PDF", "pdf", r.avaliacao60, "Avaliacao 60 pontos", true],
-    ] },
+    downloads: (r, it) => {
+      const cab = (pts) => cabecalhoProva(it, pts);
+      const a30 = { ...r.avaliacao30, cabecalho: cab(30) }, a60 = { ...r.avaliacao60, cabecalho: cab(60) };
+      return [
+        ["Avaliação 30 · Word", "docx", a30, "Avaliacao 30 pontos"],
+        ["Avaliação 60 · Word", "docx", a60, "Avaliacao 60 pontos"],
+        ["30 · PDF", "pdf", a30, "Avaliacao 30 pontos", true],
+        ["60 · PDF", "pdf", a60, "Avaliacao 60 pontos", true],
+      ];
+    } },
   { id: "atividade", nome: "Atividade do educador", formato: "Word",
     downloads: (r) => [
       ["Teórica · Word", "docx", r.teorica, "Atividade teorica"],
@@ -38,7 +42,22 @@ let gerando = false;
 function novoItem(uc = null) {
   return { uc, resultados: {}, estados: {}, sequenciaId: null };
 }
+let usuarioLogado = null;
 const item = () => fila[atual];
+
+// Cabeçalho da prova: o que o sistema sabe vem preenchido; aluno, data e nota ficam para preencher.
+function cabecalhoProva(it, pontos) {
+  const f = $("#form").elements;
+  const d = it?.dados || {};
+  return {
+    curso: d.curso || f.curso?.value || "",
+    uc: d.uc || it?.uc?.nome || f.uc?.value || "",
+    turma: d.turma || f.turma?.value || "",
+    turno: d.turno || f.turno?.value || "",
+    instrutor: d.instrutor || f.instrutor?.value || usuarioLogado?.nome || "",
+    pontos,
+  };
+}
 
 // ---------- Sequência (painel da direita) ----------
 function render() {
@@ -56,7 +75,7 @@ function render() {
       const acoes = document.createElement("div");
       acoes.className = "acoes";
       const sufixo = it.uc ? ` - ${nomeArquivo(it.uc.nome)}` : "";
-      for (const [rotulo, fmt, dados, nome, alt] of et.downloads(it.resultados[et.id])) {
+      for (const [rotulo, fmt, dados, nome, alt] of et.downloads(it.resultados[et.id], it)) {
         const b = document.createElement("button");
         b.type = "button";
         b.textContent = rotulo;
@@ -731,6 +750,7 @@ montarAvaliacoes();
 $("#diasSemana").addEventListener("change", calcularCronograma);
 
 const usuario = await iniciarPagina("gerar");
+usuarioLogado = usuario;
 if (usuario) {
   if (!$("#form").elements.instrutor.value) $("#form").elements.instrutor.value = usuario.nome;
   aplicarModoUc();
