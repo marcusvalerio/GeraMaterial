@@ -723,9 +723,15 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 [data-tema="escuro"] [data-area="inicio"]    { --tom: #222c40; }
 [data-tema="escuro"] input::placeholder, [data-tema="escuro"] textarea::placeholder { color: #5d6a84; }
 [data-tema="escuro"] .soltar { border-color: #33416a; }
-[data-tema="escuro"] .intro-tile { color: #e6ebf4; }
 
 .btn-tema { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--linha); background: var(--folha); color: var(--tinta-2);
   display: grid; place-items: center; padding: 0; margin-left: 6px; flex: none; transition: color .15s, border-color .15s; }
 .btn-tema:hover { color: var(--tinta); border-color: var(--borda-forte); }
 @media (max-width: 760px) { .btn-tema { margin-left: auto; } .btn-tema + .conta { margin-left: 8px; } }
+
+/* Abertura: cartões sempre nas cores claras das áreas, com ícone escuro (nos dois temas) */
+.intro .intro-tile[data-area="gerar"]     { --tom: #dce8f8; }
+.intro .intro-tile[data-area="materiais"] { --tom: #ddf1e6; }
+.intro .intro-tile[data-area="turmas"]    { --tom: #faefc9; }
+.intro .intro-tile[data-area="painel"]    { --tom: #ece4f7; }
+.intro .intro-tile { color: #12223f; }
