@@ -1,5 +1,5 @@
 import { montarCronograma, cronogramaDaUc, lerDiasSemAula, dataBr } from "./cronograma.js";
-import { iniciarPagina } from "./comum.js";
+import { $, esc, iniciarPagina } from "./comum.js";
 
 // Sequência padrão: cada etapa usa o resultado das anteriores.
 const ETAPAS = [
@@ -27,8 +27,6 @@ const ETAPAS = [
     ] },
 ];
 
-const $ = (s) => document.querySelector(s);
-const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const nomeArquivo = (t) => String(t || "").replace(/[\\/:*?"<>|]/g, "").slice(0, 60).trim();
 
 // Estado: o plano de curso lido e a fila de UCs a gerar (cada UC tem sua própria sequência).
@@ -75,6 +73,12 @@ function render() {
       const acoes = document.createElement("div");
       acoes.className = "acoes";
       const sufixo = it.uc ? ` - ${nomeArquivo(it.uc.nome)}` : "";
+      const ver = document.createElement("button");
+      ver.type = "button";
+      ver.textContent = "Ver prévia";
+      ver.className = "ver";
+      ver.onclick = () => abrirPrevia(et, it.resultados[et.id]);
+      acoes.append(ver);
       for (const [rotulo, fmt, dados, nome, alt] of et.downloads(it.resultados[et.id], it)) {
         const b = document.createElement("button");
         b.type = "button";
@@ -165,7 +169,10 @@ async function analisarPlano() {
     caixa.textContent = e.message;
   }
   aplicarModoUc();
-  marcarPassos();
+  if (passo === 0) {
+    $("#contaPasso").textContent = `Passo 1 de ${passos().length}`;
+    $("#barraPasso").style.width = `${100 / passos().length}%`;
+  }
 }
 
 function mostrarAnalise() {
@@ -201,7 +208,6 @@ function ucsEscolhidas() {
 function aoEscolherUc() {
   aplicarModoUc();
   calcularCronograma();
-  marcarPassos();
   if (gerando) return;
   // Monta a fila de UCs escolhidas, mantendo o que já foi gerado.
   const escolhidas = ucsEscolhidas();
@@ -216,9 +222,6 @@ function aplicarModoUc() {
   const comLista = Boolean(analise);
   const n = ucsEscolhidas().length;
   $("#campoUc").hidden = comLista;
-  $("#passoCal").hidden = !comLista;
-  $("#numAval").textContent = comLista ? "4" : "3";
-  $("#numGerar").textContent = comLista ? "5" : "4";
   document.querySelectorAll(".so-manual").forEach((el) => { el.hidden = comLista; });
   $("#campoUc input").required = !comLista;
   $("#ajudaTurma").textContent = comLista
@@ -239,12 +242,16 @@ function aplicarModoUc() {
 }
 
 // ---------- Calendário da turma ----------
-// Período em que o instrutor dá aula (null = turma inteira).
+// Padrão: "quando é a sua UC" (primeira e última aula, como no mapão).
+// Opcional: informando o início do curso, calcula todas as UCs em sequência.
+const dataInput = (v) => { if (!v) return null; const [a, m, d] = v.split("-").map(Number); return new Date(a, m - 1, d); };
+const modoCurso = () => Boolean($("#inicioCurso").value);
+
+// Período em que o instrutor dá aula (null = a UC inteira a partir da primeira aula).
 function periodo() {
-  if (document.querySelector("input[name=participacao]:checked")?.value !== "periodo") return null;
-  const data = (v) => { if (!v) return null; const [a, m, d] = v.split("-").map(Number); return new Date(a, m - 1, d); };
-  const de = data($("#periodoDe").value), ate = data($("#periodoAte").value);
-  return de || ate ? { de, ate } : null;
+  const de = dataInput($("#periodoDe").value), ate = dataInput($("#periodoAte").value);
+  if (modoCurso()) return de || ate ? { de, ate } : null;
+  return ate ? { de, ate } : null;
 }
 
 function diasEscolhidos() {
@@ -252,16 +259,16 @@ function diasEscolhidos() {
 }
 
 function resumoPeriodo() {
-  const per = periodo();
-  if (!per || !crono) return "";
   const escolhidas = ucsEscolhidas();
-  const linhas = (escolhidas.length ? escolhidas : analise.ucs).map((u) => {
+  if (!crono || !escolhidas.length) return "";
+  const per = periodo();
+  const linhas = escolhidas.map((u) => {
     const d = cronogramaDaUc(crono, u.nome, per);
     if (!d) return "";
-    if (d.vazio) return `<li><strong>${esc(u.nome)}</strong>: nenhuma aula sua neste período. Confira se a data inicial é um dia de aula.</li>`;
-    const falta = d.incompleta ? ` <em>O período não cobre a UC toda: faltam ${d.total - d.ultima} aula(s). Se ela continua depois, aumente o "Até".</em>` : "";
-    const origem = d.noMapao ? " · datas do seu período" : "";
-    return `<li><strong>${esc(u.nome)}</strong>: aulas ${d.primeira} a ${d.ultima} de ${d.total} (${d.dataInicio} a ${d.dataTermino})${origem}${falta}</li>`;
+    if (d.vazio) return `<li><strong>${esc(u.nome)}</strong>: nenhuma aula neste período. Confira se a primeira aula cai num dia de aula.</li>`;
+    const falta = d.incompleta ? ` <em>As datas não cobrem a UC toda: faltam ${d.total - d.ultima} aula(s). Se ela continua depois, aumente a última aula.</em>` : "";
+    const quais = d.primeira === 1 && !d.incompleta ? `${d.total} aulas` : `aulas ${d.primeira} a ${d.ultima} de ${d.total}`;
+    return `<li><strong>${esc(u.nome)}</strong>: ${quais}, de ${d.dataInicio} a ${d.dataTermino}.${falta}</li>`;
   }).join("");
   return `<div class="crono-minhas"><strong>Suas aulas</strong><ul>${linhas}</ul></div>`;
 }
@@ -270,42 +277,34 @@ function calcularCronograma() {
   const caixa = $("#cronograma");
   crono = null;
   if (!analise) { caixa.innerHTML = ""; return; }
-  const valorInicio = $("#inicioCurso").value;
   const horasAula = Number(String($("#horasAula").value).replace(",", "."));
   const dias = diasEscolhidos();
-  if (!valorInicio || !(horasAula > 0) || !dias.length) {
-    caixa.innerHTML = `<p class="crono-periodo">${!valorInicio ? "Informe a data de início do curso para ver o calendário."
-      : !dias.length ? "Escolha pelo menos um dia de aula." : "Informe quantas horas tem cada aula."}</p>`;
+  const inicio = modoCurso() ? dataInput($("#inicioCurso").value) : dataInput($("#periodoDe").value);
+  if (!inicio || !(horasAula > 0) || !dias.length) {
+    caixa.innerHTML = !dias.length ? `<p class="crono-periodo">Escolha pelo menos um dia de aula.</p>`
+      : !(horasAula > 0) ? `<p class="crono-periodo">Informe quantas horas tem cada aula.</p>` : "";
     return;
   }
-  const [a, m, d] = valorInicio.split("-").map(Number);
-  crono = montarCronograma(analise.ucs, { inicio: new Date(a, m - 1, d), horasAula, dias, semAula: lerDiasSemAula($("#semAula").value) });
+  const escolhidas = ucsEscolhidas();
+  const ucs = modoCurso() || !escolhidas.length ? analise.ucs : escolhidas;
+  crono = montarCronograma(ucs, { inicio, horasAula, dias, semAula: lerDiasSemAula($("#semAula").value) });
   if (!crono) { caixa.innerHTML = ""; return; }
-  const escolhidas = new Set(ucsEscolhidas().map((u) => u.nome));
-  const maxAulas = Math.max(...crono.meses.map((x) => x.aulas));
-  caixa.innerHTML = `
-    <div class="crono-resumo">
-      <div><strong>${crono.totalAulas}</strong><span>aulas de ${String(horasAula).replace(".", ",")}h</span></div>
-      <div><strong>${crono.semanas}</strong><span>semanas</span></div>
-      <div><strong>${crono.meses.length}</strong><span>${crono.meses.length === 1 ? "mês" : "meses"}</span></div>
-      <div><strong>${crono.totalHoras}h</strong><span>carga horária</span></div>
-    </div>
-    <p class="crono-periodo">O curso vai de <strong>${dataBr(crono.inicio)}</strong> a <strong>${dataBr(crono.termino)}</strong>.</p>
-    ${resumoPeriodo()}
+  const nomes = new Set(escolhidas.map((u) => u.nome));
+  const tabela = modoCurso() ? `
+    <p class="crono-periodo">O curso vai de <strong>${dataBr(crono.inicio)}</strong> a <strong>${dataBr(crono.termino)}</strong>: ${crono.totalAulas} aulas em ${crono.semanas} semanas.</p>
     <div class="tabela-rolagem"><table class="crono-tabela">
-      <thead><tr><th>Unidade curricular</th><th class="num">Horas</th><th class="num">Aulas</th><th class="num">Início</th><th class="num">Término</th><th class="num">Semanas</th></tr></thead>
-      <tbody>${crono.ucs.map((u) => `<tr class="${escolhidas.has(u.nome) ? "escolhida" : ""}${periodo() && escolhidas.size && !escolhidas.has(u.nome) ? " fora" : ""}">
+      <thead><tr><th>Unidade curricular</th><th class="num">Horas</th><th class="num">Aulas</th><th class="num">Início</th><th class="num">Término</th></tr></thead>
+      <tbody>${crono.ucs.map((u) => `<tr class="${nomes.has(u.nome) ? "escolhida" : nomes.size ? "fora" : ""}">
         <td>${esc(u.nome)}</td><td class="num">${u.horas}h</td><td class="num">${u.aulas.length}</td>
-        <td class="num">${u.inicio ? dataBr(u.inicio) : "-"}</td><td class="num">${u.termino ? dataBr(u.termino) : "-"}</td><td class="num">${u.semanas}</td></tr>`).join("")}</tbody>
-    </table></div>
-    <div class="crono-meses">${crono.meses.map((x) => `<div style="--peso:${Math.max(1, Math.round((x.aulas / maxAulas) * 10))}">
-      <strong title="${esc(x.rotulo)}">${esc(x.rotulo)}</strong><span>${x.aulas} aulas · ${x.horas}h</span></div>`).join("")}</div>
+        <td class="num">${u.inicio ? dataBr(u.inicio) : "-"}</td><td class="num">${u.termino ? dataBr(u.termino) : "-"}</td></tr>`).join("")}</tbody>
+    </table></div>` : "";
+  caixa.innerHTML = `${resumoPeriodo()}${tabela}
     ${crono.pulados.length ? `<details class="crono-pulados"><summary>${crono.pulados.length} ${crono.pulados.length === 1 ? "dia pulado" : "dias pulados"} (feriados e dias sem aula)</summary>
-      <ul>${crono.pulados.map((p) => `<li>${dataBr(p.data)} — ${esc(p.motivo)}</li>`).join("")}</ul></details>` : ""}
+      <ul>${crono.pulados.map((p) => `<li>${dataBr(p.data)}: ${esc(p.motivo)}</li>`).join("")}</ul></details>` : ""}
     <div class="crono-acoes"><button type="button" id="btnCrono">Baixar calendário (Excel)</button>
       ${turmaAtual ? `<a class="link-turma" href="turmas.html?id=${turmaAtual.id}">Abrir a turma ${esc(turmaAtual.nome)}</a>`
         : `<button type="button" id="btnSalvarTurma" class="primario">Salvar como turma</button>`}</div>
-    ${turmaAtual ? "" : `<p class="crono-dica">Salvando a turma, você acompanha o diário, a frequência e as notas, e gera os materiais das próximas UCs sem reenviar o plano.</p>`}`;
+    ${turmaAtual ? "" : `<p class="crono-dica">Salvando a turma, você acompanha o diário, a frequência e as notas da turma.</p>`}`;
   $("#btnCrono").onclick = baixarCronograma;
   if ($("#btnSalvarTurma")) $("#btnSalvarTurma").onclick = salvarTurma;
 }
@@ -350,7 +349,7 @@ async function salvarTurma() {
   const dados = {
     analise: { ...analise, referencia: undefined }, referencia: analise.referencia || "",
     calendario: { inicio: $("#inicioCurso").value, horasAula: $("#horasAula").value, dias: diasEscolhidos(), semAula: $("#semAula").value,
-      participacao: per ? { de: $("#periodoDe").value, ate: $("#periodoAte").value } : null },
+      de: $("#periodoDe").value, ate: $("#periodoAte").value },
     turma: { modalidade: form.elements.modalidade.value, segmento: form.elements.segmento.value, recursos: form.elements.recursos.value, dias: form.elements.dias.value },
   };
   $("#btnSalvarTurma").disabled = true;
@@ -393,11 +392,11 @@ async function carregarTurma(id) {
     $("#horasAula").value = d.calendario.horasAula || 4;
     $("#semAula").value = d.calendario.semAula || "";
     document.querySelectorAll("#diasSemana input").forEach((c) => { c.checked = (d.calendario.dias || []).includes(Number(c.value)); });
-    const part = d.calendario.participacao;
-    document.querySelector(`input[name=participacao][value="${part ? "periodo" : "tudo"}"]`).checked = true;
-    $("#periodoCampos").hidden = !part;
-    $("#periodoDe").value = part?.de || "";
-    $("#periodoAte").value = part?.ate || "";
+    // Turmas antigas guardavam o período em "participacao".
+    const part = d.calendario.participacao || {};
+    $("#periodoDe").value = d.calendario.de || part.de || "";
+    $("#periodoAte").value = d.calendario.ate || part.ate || "";
+    $("#modoCurso").open = Boolean(d.calendario.inicio);
   }
   $("#listaArquivos").innerHTML = `<li>Plano de curso da turma ${esc(turma.nome)}</li>`;
   $("#analise").hidden = false;
@@ -469,7 +468,6 @@ function atualizarAvaliacoes() {
       : o === q ? `Todas as ${q} objetivas.` : o === 0 ? `Todas as ${q} discursivas.`
       : `Questões 1 a ${o} objetivas e ${o + 1 === q ? q : `${o + 1} a ${q}`} discursiva${q - o > 1 ? "s" : ""}.`;
   });
-  marcarPassos();
 }
 
 // Lê as escolhas. Retorna null se alguma avaliação estiver sem formato.
@@ -487,28 +485,78 @@ function lerAvaliacoes() {
   return r;
 }
 
-// ---------- Geração ----------
-function validar() {
+// ---------- Assistente: um passo por tela ----------
+let passo = 0;
+const passos = () => ["passo1", "passo2", ...(analise ? ["passoCal"] : []), "passoAval", "passo3"];
+
+function mostrarPasso(n) {
+  const ps = passos();
+  passo = Math.max(0, Math.min(n, ps.length - 1));
+  document.querySelectorAll("#form .passo").forEach((el) => { el.hidden = el.id !== ps[passo]; });
+  $(`#${ps[passo]} .passo-n`).textContent = passo + 1;
+  $("#contaPasso").textContent = `Passo ${passo + 1} de ${ps.length}`;
+  $("#barraPasso").style.width = `${((passo + 1) / ps.length) * 100}%`;
+  $("#btnVoltar").hidden = passo === 0;
+  $("#telaForm .abertura").hidden = passo > 0;
+  $("#btnAvancar").hidden = passo === ps.length - 1;
+  if (ps[passo] === "passo3") mostrarRevisao();
+  avisar("");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Confere um passo. Devolve a mensagem de erro ou "" se está tudo certo.
+function errosDoPasso(id) {
   const form = $("#form");
-  const faltando = [...form.querySelectorAll("[required]")].filter((el) => !el.closest("[hidden]") && !el.value.trim());
-  form.querySelectorAll("[required]").forEach((el) => el.classList.toggle("invalido", faltando.includes(el)));
-  if (analise && !ucsEscolhidas().length) {
-    avisar("Escolha pelo menos uma unidade curricular no passo 1.", true);
-    $("#analise").scrollIntoView({ behavior: "smooth", block: "center" });
-    return false;
+  if (id === "passo1") {
+    if ($("#analise").classList.contains("lendo")) return "Aguarde: ainda estamos lendo o plano de curso.";
+    if (analise && !ucsEscolhidas().length) return "Escolha pelo menos uma unidade curricular.";
   }
-  const av = lerAvaliacoes();
-  if (!av) {
-    avisar("Escolha o formato das duas avaliações (30 e 60 pontos) no passo Avaliações.", true);
-    $("#passoAval").scrollIntoView({ behavior: "smooth", block: "center" });
-    return false;
+  if (id === "passo2") {
+    const faltando = [...$("#passo2").querySelectorAll("[required]")].filter((el) => !el.closest("[hidden]") && !el.value.trim());
+    form.querySelectorAll("[required]").forEach((el) => el.classList.toggle("invalido", faltando.includes(el)));
+    if (faltando.length) { faltando[0].focus(); return analise ? "Preencha o curso e o nome do(a) instrutor(a)." : "Preencha curso, unidade curricular e instrutor(a)."; }
   }
-  if (faltando.length) {
-    avisar(analise ? "Preencha o curso e o nome do(a) instrutor(a) para continuar." : "Preencha curso, unidade curricular e instrutor(a) para continuar.", true);
-    faltando[0].focus();
-    return false;
+  if (id === "passoAval" && !lerAvaliacoes()) return "Escolha o formato das duas avaliações (30 e 60 pontos), ou toque em Usar sugestão.";
+  return "";
+}
+
+function avancar() {
+  const erro = errosDoPasso(passos()[passo]);
+  if (erro) return avisar(erro, true);
+  mostrarPasso(passo + 1);
+}
+
+// Antes de gerar: confere todos os passos e leva para o primeiro com problema.
+function validar() {
+  const ps = passos();
+  for (let i = 0; i < ps.length; i++) {
+    const erro = errosDoPasso(ps[i]);
+    if (erro) { mostrarPasso(i); avisar(erro, true); return false; }
   }
   return true;
+}
+
+function mostrarRevisao() {
+  const f = $("#form").elements;
+  const av = lerAvaliacoes() || {};
+  const descAv = (a) => !a ? "-" : a.tipo === "prova" ? `Prova com ${a.questoes} questões (${a.objetivas} objetivas)`
+    : a.tipo === "grupo" ? `Atividade em grupo (${a.porGrupo} por grupo, ${a.entrega.toLowerCase()})` : "Prática ou situação-problema";
+  const ucs = analise ? ucsEscolhidas().map((u) => u.nome).join(", ") : f.uc.value;
+  const datas = ucsEscolhidas().map((u) => cronogramaDaUc(crono, u.nome, periodo())).find((d) => d && !d.vazio);
+  const linhas = [
+    ["Curso", f.curso.value], ["Unidade curricular", ucs], ["Instrutor(a)", f.instrutor.value],
+    ["Turma", [f.turma.value, f.turno.value].filter(Boolean).join(" · ") || "-"],
+    ["Aulas", datas ? `${datas.aulas.length} aulas, de ${datas.dataInicio} a ${datas.dataTermino}` : "A IA sugere as datas"],
+    ["Avaliação 30", descAv(av[30])], ["Avaliação 60", descAv(av[60])],
+  ];
+  $("#revisao").innerHTML = linhas.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v || "-")}</dd></div>`).join("");
+}
+
+// Formulário ou sequência (acompanhamento da geração).
+function mostrarTela(seq) {
+  $("#telaForm").hidden = seq;
+  $("#telaSeq").hidden = !seq;
+  window.scrollTo({ top: 0 });
 }
 
 function dadosDaUc(base, uc) {
@@ -560,7 +608,7 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0, continuar = false) {
   gerando = true;
   $("#btnGerar").disabled = true;
   $("#btnGerar").textContent = "Gerando os materiais…";
-  if (window.innerWidth < 920) $(".pilha").scrollIntoView({ behavior: "smooth", block: "start" });
+  mostrarTela(true);
 
   let parou = false;
   for (let k = inicioUc; k < fila.length && !parou; k++) {
@@ -608,40 +656,57 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0, continuar = false) {
   render();
   const completas = fila.filter((it) => ETAPAS.every((e) => it.resultados[e.id])).length;
   if (!parou && completas === fila.length) {
-    avisar(fila.length > 1 ? `${completas} unidades curriculares prontas. Use as abas da sequência para baixar cada uma.`
-      : "Sequência completa. Os materiais também ficam salvos em Meus materiais.");
+    avisar(fila.length > 1 ? `${completas} unidades curriculares prontas. Use as abas acima para baixar cada uma.`
+      : "Sequência completa. Os materiais também ficam salvos em Materiais.");
   }
 }
 
-// ---------- Histórico ----------
-async function carregarHistorico() {
-  const ul = $("#historico");
-  try {
-    const r = await fetch(`/api/sequencias?busca=${encodeURIComponent($("#busca").value)}`);
-    const { banco, itens } = await r.json();
-    if (!banco) { ul.innerHTML = `<li class="vazio">O histórico fica disponível quando o banco de dados estiver configurado.</li>`; return; }
-    if (!itens.length) { ul.innerHTML = `<li class="vazio">Suas sequências geradas aparecem aqui.</li>`; return; }
-    ul.innerHTML = "";
-    for (const s of itens) {
-      const li = document.createElement("li");
-      if (s.id == item().sequenciaId) li.className = "ativo";
-      const data = new Date(s.criado_em).toLocaleDateString("pt-BR");
-      li.innerHTML = `<strong>${esc(s.uc)}</strong><small>${esc(s.curso)}${s.turma ? " · " + esc(s.turma) : ""} · ${data}</small>
-        <div class="pontos">${ETAPAS.map((e) => `<i class="${s.etapas.includes(e.id) ? "ok" : ""}"></i>`).join("")}</div>
-        <button class="excluir" type="button" aria-label="Excluir esta sequência">✕</button>`;
-      li.onclick = () => abrir(s.id);
-      li.querySelector(".excluir").onclick = async (ev) => {
-        ev.stopPropagation();
-        if (!confirm("Excluir esta sequência do histórico?")) return;
-        await fetch(`/api/sequencias/${s.id}`, { method: "DELETE" });
-        if (fila.some((it) => it.sequenciaId == s.id)) novo();
-        carregarHistorico();
-      };
-      ul.append(li);
+// ---------- Prévia ----------
+const ROTULOS = { uc: "Unidade curricular", cargaHorariaUC: "Carga horária", dataInicio: "Início", dataTermino: "Término", ch: "Horas", data: "Data" };
+const rotulo = (k) => ROTULOS[k] || k.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
+
+function htmlDoc(d) {
+  if (!d) return "";
+  return `<h3>${esc(d.titulo)}</h3>` + (d.secoes || []).map((s) => `<h4>${esc(s.titulo)}</h4>
+    ${(s.paragrafos || []).map((p) => `<p>${esc(p)}</p>`).join("")}
+    ${(s.itens || []).length ? `<ul>${s.itens.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
+    ${s.tabela?.cabecalho ? htmlTabela(s.tabela.cabecalho, s.tabela.linhas || []) : ""}`).join("");
+}
+const htmlTabela = (cab, linhas) => `<div class="tabela-rolagem"><table class="tabela"><thead><tr>${cab.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
+  <tbody>${linhas.map((l) => `<tr>${l.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+
+// Textos de um slide, de qualquer layout (títulos, itens, cartões...).
+function textosDe(v, fora = new Set(["layout", "icone", "titulo", "olho", "destaque"])) {
+  if (v == null) return [];
+  if (typeof v !== "object") return [String(v)];
+  if (Array.isArray(v)) return v.flatMap((x) => textosDe(x, fora));
+  return Object.entries(v).filter(([k]) => !fora.has(k)).flatMap(([k, x]) => (k === "titulo" ? [] : textosDe(x, new Set(["layout", "icone"]))));
+}
+
+function htmlGenerico(o) {
+  return Object.entries(o || {}).map(([k, v]) => {
+    if (v == null || v === "") return "";
+    if (typeof v !== "object") return `<p><strong>${esc(rotulo(k))}:</strong> ${esc(v)}</p>`;
+    if (Array.isArray(v) && v.every((x) => typeof x !== "object")) return `<h4>${esc(rotulo(k))}</h4><ul>${v.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    if (Array.isArray(v)) {
+      const cols = [...new Set(v.flatMap((x) => Object.keys(x || {})))].slice(0, 6);
+      return `<h4>${esc(rotulo(k))}</h4>${htmlTabela(cols.map(rotulo), v.map((x) => cols.map((c) => (typeof x?.[c] === "object" ? textosDe(x[c]).join("; ") : x?.[c] ?? ""))))}`;
     }
-  } catch {
-    ul.innerHTML = `<li class="vazio">Não foi possível carregar o histórico. Verifique a conexão.</li>`;
-  }
+    return `<h4>${esc(rotulo(k))}</h4>${htmlGenerico(v)}`;
+  }).join("");
+}
+
+function abrirPrevia(et, r) {
+  let html;
+  if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60);
+  else if (et.id === "atividade") html = htmlDoc(r.teorica) + htmlDoc(r.pratica);
+  else if (et.id === "slides") html = (r.slides || []).map((sl, i) => `<div class="previa-slide"><small>${i + 1}${sl.olho ? ` · ${esc(sl.olho)}` : ""}</small>
+      <strong>${esc(sl.titulo || "")}</strong>${textosDe(sl).slice(0, 8).map((t) => `<p>${esc(t)}</p>`).join("")}</div>`).join("");
+  else html = htmlGenerico(r);
+  $("#previaTitulo").textContent = et.nome;
+  $("#previaCorpo").innerHTML = html || "<p>Sem conteúdo para mostrar.</p>";
+  $("#previa").showModal();
+  $("#previaCorpo").scrollTop = 0;
 }
 
 async function abrir(id) {
@@ -658,11 +723,8 @@ async function abrir(id) {
   form.querySelectorAll(".invalido").forEach((el) => el.classList.remove("invalido"));
   avisar("");
   aplicarModoUc();
-  marcarPassos();
   render();
-  carregarHistorico();
-  gaveta(false);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  mostrarTela(true);
 }
 
 function limparPlano() {
@@ -685,10 +747,9 @@ function novo() {
   $("#form").reset();
   avisar("");
   aplicarModoUc();
-  marcarPassos();
   render();
-  gaveta(false);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  mostrarPasso(0);
+  mostrarTela(false);
 }
 
 // ---------- Eventos ----------
@@ -700,38 +761,28 @@ $("#form").addEventListener("submit", (e) => {
   gerarFila(0, 0);
 });
 $("#btnNovo").onclick = novo;
-function gaveta(abrir) {
-  $("#lateral").classList.toggle("aberta", abrir);
-  $("#veu").hidden = !abrir;
-  $("#btnMenu").setAttribute("aria-expanded", String(abrir));
-  if (abrir) { carregarHistorico(); $("#busca").focus(); }
-}
+$("#btnEditar").onclick = () => { mostrarTela(false); mostrarPasso(passos().length - 1); };
+$("#btnVoltar").onclick = () => mostrarPasso(passo - 1);
+$("#btnAvancar").onclick = avancar;
+$("#fecharPrevia").onclick = () => $("#previa").close();
+$("#previa").addEventListener("click", (e) => { if (e.target === $("#previa")) $("#previa").close(); });
+// Enter num campo avança o passo (em vez de enviar o formulário inteiro).
+$("#form").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.tagName === "INPUT" && passos()[passo] !== "passo3") { e.preventDefault(); avancar(); }
+});
 function avisar(msg, erro = false) {
-  $("#aviso").textContent = msg;
-  $("#aviso").classList.toggle("erro", erro);
+  const el = $("#telaSeq").hidden ? $("#aviso") : $("#avisoSeq");
+  el.textContent = msg;
+  el.classList.toggle("erro", erro);
 }
-function marcarPassos() {
-  const form = $("#form");
-  $("#passo1").classList.toggle("feito", (inputArq.files.length > 0 || Boolean(turmaAtual)) && (!analise || ucsEscolhidas().length > 0));
-  const campos = analise ? ["curso", "instrutor"] : ["curso", "uc", "instrutor"];
-  $("#passoAval")?.classList.toggle("feito", Boolean(document.querySelector(".cartao-av") && lerAvaliacoes()));
-  $("#passo2").classList.toggle("feito", campos.every((n) => form.elements[n].value.trim()));
-}
-$("#btnMenu").onclick = () => gaveta(true);
-$("#btnFechar").onclick = () => gaveta(false);
-$("#veu").onclick = () => gaveta(false);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") gaveta(false); });
-$("#form").addEventListener("input", (e) => { e.target.classList.remove("invalido"); marcarPassos(); });
-let t;
-$("#busca").oninput = () => { clearTimeout(t); t = setTimeout(carregarHistorico, 250); };
-
+$("#form").addEventListener("input", (e) => e.target.classList.remove("invalido"));
 const inputArq = $("#arquivos");
 const mostrarArquivos = () => {
   $("#listaArquivos").innerHTML = [...inputArq.files].map((f) => `<li>${esc(f.name)}</li>`).join("");
 };
 const aoTrocarArquivo = () => {
   if (turmaAtual) { turmaAtual = null; history.replaceState(null, "", location.pathname); mostrarFaixaTurma(); }
-  mostrarArquivos(); marcarPassos(); analisarPlano();
+  mostrarArquivos(); analisarPlano();
 };
 inputArq.onchange = aoTrocarArquivo;
 const up = $("#upload");
@@ -740,12 +791,6 @@ up.ondragleave = () => up.classList.remove("arrastando");
 up.ondrop = (e) => { e.preventDefault(); up.classList.remove("arrastando"); inputArq.files = e.dataTransfer.files; aoTrocarArquivo(); };
 
 ["#inicioCurso", "#horasAula", "#semAula", "#periodoDe", "#periodoAte"].forEach((sel) => $(sel).addEventListener("input", calcularCronograma));
-$("#participacao").addEventListener("change", () => {
-  const per = document.querySelector("input[name=participacao]:checked").value === "periodo";
-  $("#periodoCampos").hidden = !per;
-  if (per && !$("#periodoDe").value) $("#periodoDe").value = new Date().toLocaleDateString("en-CA");
-  calcularCronograma();
-});
 montarAvaliacoes();
 $("#diasSemana").addEventListener("change", calcularCronograma);
 
@@ -755,7 +800,7 @@ if (usuario) {
   if (!$("#form").elements.instrutor.value) $("#form").elements.instrutor.value = usuario.nome;
   aplicarModoUc();
   render();
-  carregarHistorico();
+  mostrarPasso(0);
   const idTurma = new URLSearchParams(location.search).get("turma");
   if (idTurma) await carregarTurma(Number(idTurma));
   const idSeq = new URLSearchParams(location.search).get("sequencia");

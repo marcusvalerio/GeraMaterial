@@ -52,7 +52,7 @@ function limparSessao(res) {
   res.setHeader("Set-Cookie", `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 }
 
-const publico = (u) => u && { id: Number(u.id), nome: u.nome, email: u.email, papel: u.papel, aprovado: u.aprovado };
+const publico = (u) => u && { id: Number(u.id), nome: u.nome, email: u.email, papel: u.papel, aprovado: u.aprovado, tour: Boolean(u.tour_visto) };
 export const ehGestor = (u) => u && (u.papel === "admin" || u.papel === "coordenador");
 
 // Carrega o usuário da sessão em req.usuario (ou null).
@@ -61,7 +61,7 @@ export async function carregarUsuario(req, _res, next) {
   const t = lerToken(lerCookie(req, COOKIE));
   if (t && sql) {
     try {
-      const [u] = await sql`SELECT id, nome, email, papel, aprovado, nova_senha, sessao_versao FROM usuarios WHERE id = ${t.id}`;
+      const [u] = await sql`SELECT id, nome, email, papel, aprovado, nova_senha, sessao_versao, tour_visto FROM usuarios WHERE id = ${t.id}`;
       // Senha revogada pelo administrador (versão mudou) ou ainda provisória: sessão não vale.
       if (u && Number(u.sessao_versao) === t.versao && !u.nova_senha) req.usuario = publico(u);
     } catch (e) { console.error("sessão:", e.message); }
@@ -136,6 +136,12 @@ export function rotasAuth(app) {
       gravarSessao(res, u.id, Number(u.sessao_versao));
       res.json({ usuario: publico(u) });
     } catch (e) { console.error(e); res.status(500).json({ erro: e.message }); }
+  });
+
+  // Marca o tour de primeiro acesso como visto.
+  app.post("/api/auth/tour", exigeLogin, async (req, res) => {
+    await sql`UPDATE usuarios SET tour_visto = true WHERE id = ${req.usuario.id}`;
+    res.json({ ok: true });
   });
 
   app.post("/api/auth/sair", (_req, res) => { limparSessao(res); res.json({ ok: true }); });

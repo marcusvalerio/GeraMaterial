@@ -33,6 +33,7 @@ export function introAbertura() {
   let jaViu = false;
   try { jaViu = sessionStorage.getItem("gd_intro") === "1"; sessionStorage.setItem("gd_intro", "1"); } catch { /* sem storage */ }
   if (jaViu || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  try { sessionStorage.setItem("gd_intro_agora", "1"); setTimeout(() => sessionStorage.removeItem("gd_intro_agora"), 3000); } catch { /* sem storage */ }
   const el = document.createElement("div");
   el.className = "intro";
   el.setAttribute("aria-hidden", "true");
@@ -66,6 +67,7 @@ export async function iniciarPagina(atual) {
       <nav class="menu-areas" aria-label="Áreas">${areas.map((a) => `<a href="${a.href}" data-area="${a.id}"${a.id === atual ? ' aria-current="page"' : ""}>${icone(a, 18)}<span>${a.nome}</span></a>`).join("")}</nav>
       <details class="conta"><summary aria-label="Sua conta: ${esc(usuario.nome)}">${esc(usuario.nome.trim().charAt(0).toUpperCase())}</summary>
         <div class="conta-menu"><p><strong>${esc(usuario.nome)}</strong><span>${esc(usuario.email)}</span><span class="papel">${{ admin: "Administrador", coordenador: "Coordenação", instrutor: "Instrutor(a)" }[usuario.papel]}</span></p>
+        <a class="conta-link" href="inicio.html?tour=1">Rever o tour</a>
         <a class="conta-link" href="fontes-gera-documento.zip" download>Baixar fonte Inter</a>
         <button type="button" id="btnSair">Sair</button></div></details>`;
     $("#btnSair").onclick = async () => { await api("/api/auth/sair", { metodo: "POST" }); location.href = "entrar.html"; };
@@ -79,7 +81,70 @@ export async function iniciarPagina(atual) {
     document.body.append(nav);
   }
   document.body.classList.add("pronto", "com-abas");
+  // Tour de primeiro acesso (na Home), ou quando pedido pelo menu da conta.
+  if (atual === "inicio" && (!usuario.tour || new URLSearchParams(location.search).has("tour"))) {
+    setTimeout(() => iniciarTour(gestor), sessionStorage.getItem("gd_intro_agora") ? 2300 : 300);
+  }
   return usuario;
+}
+
+// ---------- Tour ----------
+// Destaca uma parte da tela por vez, com um cartão explicando. Pula a qualquer momento.
+function visivel(sel) {
+  return [...document.querySelectorAll(sel)].find((el) => el.getClientRects().length && getComputedStyle(el).visibility !== "hidden") || null;
+}
+function iniciarTour(gestor) {
+  const area = (id) => `.abas-app a[data-area="${id}"], .menu-areas a[data-area="${id}"]`;
+  const passos = [
+    { titulo: "Bem-vindo(a) ao gera.documento", texto: "Em poucos passos você vê onde fica cada coisa. Leva menos de um minuto." },
+    { alvo: "[data-tour=gerar]", titulo: "Gerar materiais", texto: "Comece por aqui: envie o plano de curso, escolha a UC e responda algumas perguntas. Saem o PER, o plano de aula, os slides, as avaliações e a atividade." },
+    { alvo: area("materiais"), titulo: "Materiais", texto: "Tudo o que você gerou fica guardado aqui. Dá para baixar de novo e continuar uma geração que parou no meio." },
+    { alvo: area("turmas"), titulo: "Turmas", texto: "Diário, frequência e notas de cada turma, com o roteiro de cada aula." },
+    ...(gestor ? [{ alvo: area("painel"), titulo: "Painel", texto: "Andamento de todas as turmas, instrutores e o cadastro de acessos." }] : []),
+    { alvo: ".conta summary", titulo: "Sua conta", texto: "Aqui você sai do sistema e pode rever este tour quando quiser." },
+  ];
+  let i = 0, alvo = null;
+  const veu = document.createElement("div");
+  veu.className = "tour-veu";
+  const card = document.createElement("div");
+  card.className = "tour-card";
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-live", "polite");
+  document.body.append(veu, card);
+  const fim = () => {
+    alvo?.classList.remove("tour-alvo");
+    veu.remove(); card.remove();
+    fetch("/api/auth/tour", { method: "POST" }).catch(() => {});
+    if (location.search.includes("tour")) history.replaceState(null, "", location.pathname);
+  };
+  const mostrar = () => {
+    alvo?.classList.remove("tour-alvo");
+    const p = passos[i];
+    alvo = p.alvo ? visivel(p.alvo) : null;
+    if (p.alvo && !alvo) { i++; return i < passos.length ? mostrar() : fim(); }
+    veu.classList.toggle("com-alvo", Boolean(alvo));
+    const ultimo = i === passos.length - 1;
+    card.innerHTML = `<h3>${p.titulo}</h3><p>${p.texto}</p><div class="tour-rodape">
+      <span class="tour-pontos">${passos.map((_, k) => `<i class="${k === i ? "ativo" : ""}"></i>`).join("")}</span>
+      ${ultimo ? "" : '<button type="button" class="tour-pular">Pular</button>'}
+      <button type="button" class="btn-gerar">${ultimo ? "Começar" : i === 0 ? "Mostrar" : "Próximo"}</button></div>`;
+    card.querySelector(".tour-pular")?.addEventListener("click", fim);
+    card.querySelector(".btn-gerar").onclick = () => { i++; i < passos.length ? mostrar() : fim(); };
+    card.style.left = card.style.top = "";
+    if (alvo) {
+      alvo.classList.add("tour-alvo");
+      alvo.scrollIntoView({ block: "nearest" });
+      const r = alvo.getBoundingClientRect(), ch = card.offsetHeight, cw = card.offsetWidth;
+      const top = r.bottom + 14 + ch < innerHeight ? r.bottom + 14 : Math.max(16, r.top - ch - 14);
+      card.style.top = `${top}px`;
+      card.style.left = `${Math.min(Math.max(16, r.left + r.width / 2 - cw / 2), innerWidth - cw - 16)}px`;
+    } else {
+      card.style.top = `${(innerHeight - card.offsetHeight) / 2}px`;
+      card.style.left = `${(innerWidth - card.offsetWidth) / 2}px`;
+    }
+    card.querySelector(".btn-gerar").focus();
+  };
+  mostrar();
 }
 
 // Atualização automática: ao voltar para o app, se saiu versão nova e nada está sendo gerado, recarrega.

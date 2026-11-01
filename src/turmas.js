@@ -229,7 +229,7 @@ ${entregas.map((e) => `MATERIAL JÁ GERADO (${e.etapa}):\n${JSON.stringify(e.con
           GROUP BY t.id, t.nome ORDER BY aulas DESC LIMIT 5`,
       sql`SELECT s.id, s.uc, s.curso, s.criado_em, COALESCE(array_agg(e.etapa) FILTER (WHERE e.etapa IS NOT NULL), '{}') AS etapas
           FROM sequencias s LEFT JOIN entregas e ON e.sequencia_id = s.id
-          WHERE s.usuario_id = ${uid} GROUP BY s.id ORDER BY s.criado_em DESC LIMIT 3`,
+          WHERE s.usuario_id = ${uid} GROUP BY s.id ORDER BY s.criado_em DESC LIMIT 10`,
       sql`SELECT (SELECT count(*)::int FROM turmas WHERE usuario_id = ${uid}) AS turmas,
                  (SELECT count(*)::int FROM sequencias WHERE usuario_id = ${uid}) AS materiais,
                  (SELECT count(*)::int FROM aulas a JOIN turmas t ON t.id = a.turma_id WHERE t.usuario_id = ${uid} AND a.realizada) AS aulas_dadas,

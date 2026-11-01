@@ -20,24 +20,17 @@
 <body>
 <header class="topo"></header>
 
-<button id="btnMenu" type="button" hidden aria-controls="lateral" aria-expanded="false">Meus materiais</button>
-<aside class="gaveta" id="lateral" aria-label="Meus materiais">
-  <div class="gaveta-topo">
-    <h2>Meus materiais</h2>
-    <button class="fechar" id="btnFechar" type="button" aria-label="Fechar">✕</button>
-  </div>
-  <button class="btn-novo" id="btnNovo" type="button">Começar nova sequência</button>
-  <input class="busca" id="busca" type="search" placeholder="Buscar por curso, UC ou turma" aria-label="Buscar materiais">
-  <ul class="historico" id="historico"></ul>
-</aside>
-<div class="veu" id="veu" hidden></div>
-
 <main class="palco">
   <div class="faixa-turma" id="faixaTurma" hidden></div>
+  <div id="telaForm">
   <section class="abertura">
     <h1>Do plano de curso à aula pronta.</h1>
-    <p>Envie o plano de curso, conte sobre a turma e receba os cinco materiais da sequência de ensino, um depois do outro, já nos modelos oficiais.</p>
+    <p>Responda algumas perguntas e receba os cinco materiais da sequência, já nos modelos oficiais.</p>
   </section>
+  <div class="assistente-topo">
+    <span class="assistente-conta" id="contaPasso">Passo 1 de 5</span>
+    <div class="assistente-barra" aria-hidden="true"><div id="barraPasso"></div></div>
+  </div>
 
   <div class="mesa">
     <form id="form" class="roteiro" novalidate>
@@ -81,10 +74,11 @@
       </section>
 
       <section class="passo" id="passoCal" hidden>
-        <div class="passo-cab"><span class="passo-n">3</span><h2>Calendário da turma</h2></div>
-        <p class="passo-ajuda">Com a carga horária do plano de curso, o sistema distribui as aulas pelas datas, pulando feriados nacionais.</p>
+        <div class="passo-cab"><span class="passo-n">3</span><h2>Quando é a sua UC?</h2></div>
+        <p class="passo-ajuda">Use as datas do mapão. O sistema distribui as aulas pelos dias de aula e pula os feriados.</p>
         <div class="grade">
-          <label>Início do curso<input type="date" name="inicioCurso" id="inicioCurso"></label>
+          <label>Primeira aula<input type="date" id="periodoDe"></label>
+          <label>Última aula <span class="opcional">(opcional)</span><input type="date" id="periodoAte"></label>
           <label>Horas por aula<input type="number" name="horasAula" id="horasAula" min="1" max="12" step="0.5" value="4" inputmode="decimal"></label>
         </div>
         <fieldset class="dias-semana" id="diasSemana">
@@ -97,17 +91,13 @@
           <label><input type="checkbox" value="6">Sáb</label>
         </fieldset>
         <label>Outros dias sem aula <span class="opcional">(opcional)</span><input name="semAula" id="semAula" placeholder="Ex.: 24/12/2026 a 06/01/2027, 08/12/2026"></label>
-        <fieldset class="escolha" id="participacao">
-          <legend>Sua participação na turma</legend>
-          <label class="opcao"><input type="radio" name="participacao" value="tudo" checked><span><strong>Do início ao fim</strong><small>Você dá todas as aulas das UCs escolhidas</small></span></label>
-          <label class="opcao"><input type="radio" name="participacao" value="periodo"><span><strong>Só um período</strong><small>Use as datas do mapão: quando a sua UC começa e termina, ou só os dias que você cobre</small></span></label>
-        </fieldset>
-        <div class="grade" id="periodoCampos" hidden>
-          <label>Começo a dar aula em<input type="date" id="periodoDe"></label>
-          <label>Até <span class="opcional">(opcional)</span><input type="date" id="periodoAte"></label>
-          <p class="dica-av">Se a UC escolhida estiver em outras datas no calendário abaixo, o sistema usa as datas que você informou aqui.</p>
-        </div>
+        <details class="mais" id="modoCurso">
+          <summary>Calcular o curso inteiro (opcional)</summary>
+          <p class="passo-ajuda">Para ver todas as UCs do curso em sequência e salvar a turma completa, informe o início do curso. Aí as datas acima passam a ser o seu período dentro do curso.</p>
+          <label>Início do curso<input type="date" name="inicioCurso" id="inicioCurso"></label>
+        </details>
         <div class="cronograma" id="cronograma" aria-live="polite"></div>
+        <p class="passo-ajuda">Pode pular este passo: sem datas, a IA sugere o calendário das aulas.</p>
       </section>
 
       <section class="passo" id="passoAval">
@@ -117,12 +107,21 @@
       </section>
 
       <section class="passo" id="passo3">
-        <div class="passo-cab"><span class="passo-n" id="numGerar">3</span><h2>Gerar</h2></div>
-        <p class="passo-ajuda" id="ajudaGerar">Leva de 5 a 15 minutos por unidade curricular. Pode baixar cada material assim que ele ficar pronto.</p>
+        <div class="passo-cab"><span class="passo-n" id="numGerar">3</span><h2>Revisar e gerar</h2></div>
+        <p class="passo-ajuda" id="ajudaGerar">Leva de 5 a 15 minutos por unidade curricular. Pode sair do app: a geração continua.</p>
+        <dl class="revisao" id="revisao"></dl>
         <button type="submit" class="btn-gerar" id="btnGerar">Gerar os cinco materiais</button>
-        <p class="aviso" id="aviso" role="status"></p>
       </section>
+      <p class="aviso" id="aviso" role="status"></p>
+      <div class="assistente-nav">
+        <button type="button" class="btn-secundario" id="btnVoltar">Voltar</button>
+        <button type="button" class="btn-gerar btn-curto" id="btnAvancar">Continuar</button>
+      </div>
     </form>
+  </div>
+  </div>
+
+  <div id="telaSeq" hidden>
 
     <section class="pilha" aria-labelledby="tituloPilha">
       <div class="pilha-cab">
@@ -132,10 +131,20 @@
       <div class="fila-ucs" id="filaUcs" role="tablist" aria-label="Unidades curriculares" hidden></div>
       <div class="progresso" aria-hidden="true"><div id="barra"></div></div>
       <ol class="folhas" id="etapas"></ol>
+      <p class="aviso" id="avisoSeq" role="status"></p>
+      <div class="seq-acoes">
+        <button type="button" class="btn-secundario" id="btnEditar">Voltar ao formulário</button>
+        <button type="button" class="btn-secundario" id="btnNovo">Novo material</button>
+      </div>
       <p class="nota-fonte">Os slides e documentos usam a fonte Inter. Se o PowerPoint ou o Word mostrarem outra letra, <a href="fontes-gera-documento.zip" download>baixe e instale a fonte</a>.</p>
     </section>
   </div>
 </main>
+
+<dialog class="previa" id="previa" aria-labelledby="previaTitulo">
+  <div class="previa-topo"><h2 id="previaTitulo">Prévia</h2><button type="button" class="fechar" id="fecharPrevia" aria-label="Fechar">✕</button></div>
+  <div class="previa-corpo" id="previaCorpo"></div>
+</dialog>
 <script type="module" src="app.js"></script>
 </body>
 </html>
