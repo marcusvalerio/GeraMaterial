@@ -193,7 +193,7 @@ function mostrarAnalise() {
       <button type="button" class="link-todas" id="btnTodas">Marcar todas</button></div>
     <ul class="lista-ucs">${analise.ucs.map((u, k) => `<li><label>
       <input type="checkbox" name="ucEscolhida" value="${k}">
-      <span class="uc-nome">${esc(u.nome)}<span class="uc-modulo">${esc(u.modulo ? `Módulo ${u.modulo}` : "")}</span></span>
+      <span class="uc-nome">${esc(u.nome)}<span class="uc-modulo">${esc(!u.modulo ? "" : /^m[óo]dulo/i.test(u.modulo) ? u.modulo : `Módulo ${u.modulo}`)}</span></span>
       <span class="uc-ch">${esc(u.cargaHoraria || "")}</span></label></li>`).join("")}</ul>`;
   const form = $("#form");
   if (analise.curso) form.elements.curso.value = analise.curso;
