@@ -118,7 +118,7 @@ function renderAlunos() {
             <td class="num ${pct !== null && pct < 75 ? "alerta" : ""}">${pct === null ? "-" : pct + "%"}</td>
             <td class="num"><button type="button" class="link-remover" data-remover="${al.id}" aria-label="Remover ${esc(al.nome)}">Remover</button></td></tr>`;
         }).join("")}</tbody></table>
-        <p class="dica-aba">Frequência abaixo de 75% aparece em vermelho. A chamada é feita dentro de cada aula, na aba Calendário e diário.</p>`
+        <p class="dica-aba">Frequência abaixo de 75% aparece em vermelho. A chamada é feita dentro de cada aula, na aba Diário.</p>`
         : `<div class="vazio-grande pequeno"><h2>Sem alunos</h2><p>Cole a lista ao lado para começar a fazer chamada e lançar notas.</p></div>`}
       </div>
       <form class="caixa" id="formAlunos">
@@ -148,7 +148,7 @@ function renderNotas() {
   const { alunos, notas, aulas } = dados;
   const ucs = [...new Set(aulas.map((a) => a.uc))];
   if (!alunos.length) {
-    $("#aba-notas").innerHTML = `<div class="vazio-grande pequeno"><h2>Sem alunos</h2><p>Adicione os alunos na aba Alunos e frequência.</p></div>`;
+    $("#aba-notas").innerHTML = `<div class="vazio-grande pequeno"><h2>Sem alunos</h2><p>Adicione os alunos na aba Alunos.</p></div>`;
     return;
   }
   const ucAtual = $("#aba-notas").dataset.uc && ucs.includes($("#aba-notas").dataset.uc) ? $("#aba-notas").dataset.uc : ucs[0];
@@ -237,7 +237,7 @@ async function abrirAula(id) {
   // Chamada
   const alunos = dados.alunos;
   if (!alunos.length) {
-    $("#aChamada").innerHTML = `<p class="dica-aba">Adicione os alunos na aba Alunos e frequência para fazer a chamada.</p>`;
+    $("#aChamada").innerHTML = `<p class="dica-aba">Adicione os alunos na aba Alunos para fazer a chamada.</p>`;
   } else {
     const { itens } = await api(`/api/aulas/${a.id}/frequencia`);
     const marcado = new Map(itens.map((f) => [Number(f.aluno_id), f.presente]));

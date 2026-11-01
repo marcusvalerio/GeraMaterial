@@ -31,8 +31,8 @@
     <span class="seta" aria-hidden="true">→</span>
   </a>
   <div class="inicio-grade">
-    <section class="bloco-home"><h2>Próximas aulas</h2><ul class="lista-home" id="proximas"></ul></section>
-    <section class="bloco-home"><h2>Materiais recentes</h2><ul class="lista-home" id="recentes"></ul></section>
+    <section class="bloco-home"><h2>Próximas aulas</h2><ul class="lista-home" id="proximas"><li><p class="vazio-home">Carregando…</p></li></ul></section>
+    <section class="bloco-home"><h2>Materiais recentes</h2><ul class="lista-home" id="recentes"><li><p class="vazio-home">Carregando…</p></li></ul></section>
   </div>
 </main>
 <script type="module">
@@ -63,7 +63,7 @@ if (usuario) {
       prox ? `${prox.turma} · aula ${prox.numero_uc} de ${prox.total_uc}` : "Nenhuma aula marcada", prox ? `turmas.html?id=${prox.turma_id}` : "turmas.html"),
     cartao("gerar", "Para continuar", incompletos.length, incompletos.length ? `${incompletos[0].uc} e outros` : "Nenhuma geração pela metade",
       incompletos.length ? `index.html?sequencia=${incompletos[0].id}` : "materiais.html"),
-    cartao("painel", "Diário pendente", pend, pend ? `${pend === 1 ? "aula" : "aulas"} sem registro` : "Tudo registrado",
+    cartao("turmas", "Diário pendente", pend, pend ? `${pend === 1 ? "aula" : "aulas"} sem registro` : "Tudo registrado",
       pendentes[0] ? `turmas.html?id=${pendentes[0].id}` : "turmas.html", pend > 0),
     cartao("materiais", "Materiais", totais.materiais, `em ${totais.turmas} ${totais.turmas === 1 ? "turma" : "turmas"}`, "materiais.html"),
   ].join("");

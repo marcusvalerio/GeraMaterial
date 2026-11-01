@@ -487,11 +487,13 @@ function lerAvaliacoes() {
 
 // ---------- Assistente: um passo por tela ----------
 let passo = 0;
-const passos = () => ["passo1", "passo2", ...(analise ? ["passoCal"] : []), "passoAval", "passo3"];
+// Sem plano de curso (preenchimento manual), o passo das datas não se aplica. Até saber, conta os 5 passos.
+const semPlano = () => passo > 0 && !analise;
+const passos = () => ["passo1", "passo2", ...(analise || !semPlano() ? ["passoCal"] : []), "passoAval", "passo3"];
 
 function mostrarPasso(n) {
-  const ps = passos();
-  passo = Math.max(0, Math.min(n, ps.length - 1));
+  passo = Math.max(0, Math.min(n, passos().length - 1));
+  const ps = passos(); // recalcula: sem plano de curso, o passo das datas sai da conta
   document.querySelectorAll("#form .passo").forEach((el) => { el.hidden = el.id !== ps[passo]; });
   $(`#${ps[passo]} .passo-n`).textContent = passo + 1;
   $("#contaPasso").textContent = `Passo ${passo + 1} de ${ps.length}`;

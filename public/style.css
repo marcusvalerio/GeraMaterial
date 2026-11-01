@@ -2,6 +2,7 @@
 @font-face { font-family: "Geist Serif"; src: url("fonts/GeistSerif-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 
 :root {
+  --sobre-tom: #12223f;
   --papel: #f3f5f8;
   --folha: #ffffff;
   --tinta: #12223f;
@@ -376,10 +377,10 @@ body[data-area="gerar"]     { --area: #dce8f8; --area-forte: #0b4fa3; }
 body[data-area="materiais"] { --area: #ddf1e6; --area-forte: #1f7a52; }
 body[data-area="turmas"]    { --area: #faefc9; --area-forte: var(--ambar-txt); }
 body[data-area="painel"]    { --area: #ece4f7; --area-forte: #5b3e96; }
-[data-area="gerar"]     { --tom: #dce8f8; }
-[data-area="materiais"] { --tom: #ddf1e6; }
-[data-area="turmas"]    { --tom: #faefc9; }
-[data-area="painel"]    { --tom: #ece4f7; }
+[data-area="gerar"]     { --tom: #a9c8f5; }
+[data-area="materiais"] { --tom: #9fdcb9; }
+[data-area="turmas"]    { --tom: #f6d27a; }
+[data-area="painel"]    { --tom: #c7b2ee; }
 html, body { overflow-x: hidden; }
 
 /* Topo */
@@ -390,9 +391,9 @@ html, body { overflow-x: hidden; }
 .menu-areas { display: flex; gap: 6px; margin-left: auto; }
 .menu-areas a { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px; border-radius: var(--raio); text-decoration: none;
   font-family: var(--ui); font-weight: 600; font-size: .9rem; color: var(--tinta-2); transition: background .15s, color .15s; }
-.menu-areas a .ico { padding: 4px; box-sizing: content-box; border-radius: var(--raio); background: var(--tom); color: var(--tinta); }
+.menu-areas a .ico { padding: 4px; box-sizing: content-box; border-radius: var(--raio); background: var(--tom); color: var(--sobre-tom); }
 .menu-areas a:hover { color: var(--tinta); background: var(--folha); }
-.menu-areas a[aria-current="page"] { background: var(--tom); color: var(--tinta); }
+.menu-areas a[aria-current="page"] { background: var(--tom); color: var(--sobre-tom); }
 .menu-areas a[aria-current="page"] .ico { background: var(--solido); color: var(--sobre-solido); }
 .conta { margin-left: 4px; }
 .conta-link { display: block; margin-bottom: 8px; font-family: var(--ui); font-size: .85rem; font-weight: 600; color: var(--azul); text-decoration: none; padding: 6px 0; }
@@ -425,8 +426,8 @@ html, body { overflow-x: hidden; }
   body.com-abas { padding-bottom: calc(var(--abas-h) + env(safe-area-inset-bottom) + 12px); }
   .topo { padding: 10px 16px; gap: 10px; border-bottom: 0; background: var(--papel); }
   .topo .marca .nome, .menu-areas { display: none; }
-  .tag-area { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: var(--raio); background: var(--area);
-    font-family: var(--ui); font-weight: 700; font-size: 1rem; color: var(--tinta); }
+  .tag-area { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: var(--raio); background: var(--tom); color: var(--sobre-tom);
+    font-family: var(--ui); font-weight: 700; font-size: 1rem; }
   .tag-area .selo { width: auto; height: auto; padding: 3px 7px; font-size: .8rem; border-radius: var(--raio); }
   .topo .marca { display: none; }
   .conta { margin-left: auto; }
@@ -502,7 +503,7 @@ html, body { overflow-x: hidden; }
 
 /* ---------- Área Início ---------- */
 body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
-[data-area="inicio"] { --tom: #e7ebf2; }
+[data-area="inicio"] { --tom: #c9d2e2; }
 
 /* ---------- Intro de abertura (estilo "mini") ---------- */
 .intro { position: fixed; inset: 0; z-index: 100; background: #0b1d3f; display: grid; place-items: center; align-content: center; gap: 28px;
@@ -590,7 +591,10 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 
 /* Cadastro de pessoas e senha provisória (Painel) */
 .form-cadastro { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; margin: 12px 0 16px; }
-.form-cadastro label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
+.form-cadastro label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; margin: 0; }
+.form-cadastro select { display: block; width: 100%; margin-top: 6px; padding: 11px 13px; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--folha); color: var(--tinta); font: inherit; font-weight: 400; }
+.form-cadastro input, .form-cadastro select { height: 48px; min-height: 48px; }
+.form-cadastro .btn-gerar { height: 48px; }
 .caixa-senha { border: 1px solid var(--linha); background: var(--folha); border-radius: var(--raio-g); padding: 14px 16px; margin-bottom: 16px; }
 .caixa-senha code { font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; user-select: all; }
 .caixa-senha button { margin-right: 8px; margin-top: 6px; }
@@ -654,7 +658,7 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
   border: 1px solid var(--linha); color: var(--tinta); text-decoration: none; transition: border-color .15s, transform .15s; }
 .home-card:hover { border-color: var(--tinta-3); transform: translateY(-1px); }
 .home-card .home-rot { display: flex; align-items: center; gap: 8px; font-family: var(--ui); font-size: .82rem; font-weight: 600; color: var(--tinta-2); }
-.home-card .home-rot .ico { padding: 5px; box-sizing: content-box; border-radius: 9px; background: var(--tom, var(--papel)); color: var(--tinta); }
+.home-card .home-rot .ico { padding: 5px; box-sizing: content-box; border-radius: 9px; background: var(--tom, var(--papel)); color: var(--sobre-tom); }
 .home-card .home-valor { font-family: var(--serif); font-size: 2.1rem; line-height: 1.05; margin-top: auto; }
 .home-card .home-sub { font-size: .85rem; color: var(--tinta-3); }
 .home-card.alerta { border-color: var(--erro-borda); background: var(--erro-claro); }
@@ -716,11 +720,6 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 [data-tema="escuro"] body[data-area="turmas"]    { --area: #3b3216; --area-forte: #e7bd5a; }
 [data-tema="escuro"] body[data-area="painel"]    { --area: #2c2447; --area-forte: #b39bea; }
 [data-tema="escuro"] body[data-area="inicio"]    { --area: #222c40; --area-forte: #e6ebf4; }
-[data-tema="escuro"] [data-area="gerar"]     { --tom: #1c2d4f; }
-[data-tema="escuro"] [data-area="materiais"] { --tom: #17382a; }
-[data-tema="escuro"] [data-area="turmas"]    { --tom: #3b3216; }
-[data-tema="escuro"] [data-area="painel"]    { --tom: #2c2447; }
-[data-tema="escuro"] [data-area="inicio"]    { --tom: #222c40; }
 [data-tema="escuro"] input::placeholder, [data-tema="escuro"] textarea::placeholder { color: #5d6a84; }
 [data-tema="escuro"] .soltar { border-color: #33416a; }
 
@@ -730,8 +729,12 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 @media (max-width: 760px) { .btn-tema { margin-left: auto; } .btn-tema + .conta { margin-left: 8px; } }
 
 /* Abertura: cartões sempre nas cores claras das áreas, com ícone escuro (nos dois temas) */
-.intro .intro-tile[data-area="gerar"]     { --tom: #dce8f8; }
-.intro .intro-tile[data-area="materiais"] { --tom: #ddf1e6; }
-.intro .intro-tile[data-area="turmas"]    { --tom: #faefc9; }
-.intro .intro-tile[data-area="painel"]    { --tom: #ece4f7; }
 .intro .intro-tile { color: #12223f; }
+
+/* Gaveta (aula da turma) fica acima da barra de abas */
+.veu { z-index: 55; }
+.gaveta { z-index: 60; }
+@media (max-width: 760px) {
+  /* indicadores: o último cartão sozinho ocupa a linha inteira */
+  .indicadores > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
