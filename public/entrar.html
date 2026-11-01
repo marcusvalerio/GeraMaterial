@@ -45,6 +45,19 @@ const form = $("#form");
 
 function aplicarModo() {
   const cadastro = modo === "cadastro";
+  if (modo === "nova") {
+    $("#titulo").textContent = "Crie sua nova senha";
+    $("#subtitulo").textContent = "O administrador liberou a troca de senha desta conta. Escolha uma nova senha (mínimo 8 caracteres) para entrar.";
+    $("#campoNome").hidden = true;
+    form.elements.email.readOnly = true;
+    form.elements.senha.autocomplete = "new-password";
+    $("#btnEnviar").textContent = "Salvar e entrar";
+    $("#trocaTexto").textContent = "Não é você?";
+    $("#btnTroca").textContent = "Voltar";
+    $("#aviso").textContent = "";
+    return;
+  }
+  form.elements.email.readOnly = false;
   $("#titulo").textContent = cadastro ? "Crie sua conta" : "Entre na sua conta";
   $("#subtitulo").textContent = cadastro ? "Depois do cadastro, o administrador libera o seu acesso." : "Para gerar materiais e acompanhar suas turmas.";
   $("#campoNome").hidden = !cadastro;
@@ -63,7 +76,10 @@ form.onsubmit = async (e) => {
   const dados = Object.fromEntries(new FormData(form));
   $("#btnEnviar").disabled = true;
   try {
-    const { usuario } = await api(modo === "cadastro" ? "/api/auth/cadastro" : "/api/auth/entrar", { metodo: "POST", corpo: dados });
+    const rota = { cadastro: "/api/auth/cadastro", entrar: "/api/auth/entrar", nova: "/api/auth/nova-senha" }[modo];
+    const r = await api(rota, { metodo: "POST", corpo: dados });
+    if (r.novaSenha) { modo = "nova"; aplicarModo(); form.elements.senha.value = ""; form.elements.senha.focus(); return; }
+    const { usuario } = r;
     if (!usuario.aprovado) {
       $("#pendente").hidden = false;
       $("#aviso").textContent = "";

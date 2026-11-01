@@ -101,9 +101,25 @@ export function rotasAuth(app) {
     try {
       const email = String(req.body.email || "").trim().toLowerCase();
       const [u] = await sql`SELECT * FROM usuarios WHERE email = ${email}`;
+      // O administrador liberou a criação de uma nova senha para esta conta.
+      if (u?.nova_senha) return res.json({ novaSenha: true });
       if (!u || !confereSenha(String(req.body.senha || ""), u.senha_hash)) {
         return res.status(401).json({ erro: "E-mail ou senha incorretos." });
       }
+      gravarSessao(res, u.id);
+      res.json({ usuario: publico(u) });
+    } catch (e) { console.error(e); res.status(500).json({ erro: e.message }); }
+  });
+
+  // Só funciona para contas que o administrador marcou com "Nova senha" (vale uma vez).
+  app.post("/api/auth/nova-senha", async (req, res) => {
+    try {
+      const email = String(req.body.email || "").trim().toLowerCase();
+      const senha = String(req.body.senha || "");
+      if (senha.length < 8) return res.status(400).json({ erro: "A senha precisa ter pelo menos 8 caracteres." });
+      const [u] = await sql`UPDATE usuarios SET senha_hash = ${hashSenha(senha)}, nova_senha = false
+        WHERE email = ${email} AND nova_senha RETURNING id, nome, email, papel, aprovado`;
+      if (!u) return res.status(403).json({ erro: "Esta conta não está liberada para criar nova senha. Fale com o administrador." });
       gravarSessao(res, u.id);
       res.json({ usuario: publico(u) });
     } catch (e) { console.error(e); res.status(500).json({ erro: e.message }); }
@@ -118,18 +134,19 @@ export function rotasAuth(app) {
 
   // ---------- Administração de contas ----------
   app.get("/api/admin/usuarios", exigeLogin, exigeAdmin, async (_req, res) => {
-    const itens = await sql`SELECT id, nome, email, papel, aprovado, criado_em FROM usuarios ORDER BY aprovado, criado_em DESC`;
+    const itens = await sql`SELECT id, nome, email, papel, aprovado, nova_senha, criado_em FROM usuarios ORDER BY aprovado, criado_em DESC`;
     res.json({ itens });
   });
   app.patch("/api/admin/usuarios/:id", exigeLogin, exigeAdmin, async (req, res) => {
     const id = Number(req.params.id);
     if (id === req.usuario.id) return res.status(400).json({ erro: "Você não pode alterar a sua própria conta por aqui." });
-    const { aprovado, papel } = req.body;
+    const { aprovado, papel, novaSenha } = req.body;
     if (papel && !["admin", "coordenador", "instrutor"].includes(papel)) return res.status(400).json({ erro: "Papel inválido." });
     const [u] = await sql`
       UPDATE usuarios SET
         aprovado = COALESCE(${typeof aprovado === "boolean" ? aprovado : null}::boolean, aprovado),
-        papel = COALESCE(${papel || null}, papel)
+        papel = COALESCE(${papel || null}, papel),
+        nova_senha = COALESCE(${typeof novaSenha === "boolean" ? novaSenha : null}::boolean, nova_senha)
       WHERE id = ${id} RETURNING id, nome, email, papel, aprovado`;
     u ? res.json({ usuario: publico(u) }) : res.status(404).json({ erro: "Conta não encontrada." });
   });
