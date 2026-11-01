@@ -484,11 +484,6 @@ function validar() {
     $("#passoAval").scrollIntoView({ behavior: "smooth", block: "center" });
     return false;
   }
-  if (analise && !crono) {
-    avisar("Preencha o calendário da turma (início do curso, horas por aula e dias de aula).", true);
-    $("#passoCal").scrollIntoView({ behavior: "smooth", block: "center" });
-    return false;
-  }
   if (faltando.length) {
     avisar(analise ? "Preencha o curso e o nome do(a) instrutor(a) para continuar." : "Preencha curso, unidade curricular e instrutor(a) para continuar.", true);
     faltando[0].focus();
@@ -534,6 +529,7 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0, continuar = false) {
   const salva = continuar && fila[inicioUc]?.dados;
   if (gerando || (!salva && !validar())) return;
   if (salva) avisar("");
+  else if (analise && !crono) avisar("Sem calendário preenchido, as datas das aulas ficam a cargo da IA. Para datas exatas, preencha o passo Calendário.");
   else if (!inputArq.files.length && !turmaAtual) avisar("Sem plano de curso, a IA usa só os dados da turma. Funciona, mas fica menos preciso.");
   else avisar("");
   const fd = new FormData($("#form"));
