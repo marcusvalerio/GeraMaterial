@@ -99,11 +99,12 @@
         <fieldset class="escolha" id="participacao">
           <legend>Sua participação na turma</legend>
           <label class="opcao"><input type="radio" name="participacao" value="tudo" checked><span><strong>Do início ao fim</strong><small>Você dá todas as aulas das UCs escolhidas</small></span></label>
-          <label class="opcao"><input type="radio" name="participacao" value="periodo"><span><strong>Só um período</strong><small>Assumiu a turma no meio, cobre alguns dias ou uma substituição</small></span></label>
+          <label class="opcao"><input type="radio" name="participacao" value="periodo"><span><strong>Só um período</strong><small>Use as datas do mapão: quando a sua UC começa e termina, ou só os dias que você cobre</small></span></label>
         </fieldset>
         <div class="grade" id="periodoCampos" hidden>
           <label>Começo a dar aula em<input type="date" id="periodoDe"></label>
           <label>Até <span class="opcional">(opcional)</span><input type="date" id="periodoAte"></label>
+          <p class="dica-av">Se a UC escolhida estiver em outras datas no calendário abaixo, o sistema usa as datas que você informou aqui.</p>
         </div>
         <div class="cronograma" id="cronograma" aria-live="polite"></div>
       </section>

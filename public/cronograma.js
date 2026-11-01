@@ -114,7 +114,7 @@ export function montarCronograma(ucs, cfg) {
   }
   const puladosNoPeriodo = pulados.filter((p) => !fim || p.data <= fim);
   return {
-    ucs: resultado, inicio: ini, termino: fim,
+    cfg, ucs: resultado, inicio: ini, termino: fim,
     totalAulas: todas.length, totalHoras: todas.reduce((s, a) => s + a.ch, 0),
     semanas: ini ? Math.ceil(((fim - ini) / 86400000 + 1) / 7) : 0,
     meses: [...meses.values()], pulados: puladosNoPeriodo,
@@ -130,17 +130,45 @@ export function noPeriodo(data, periodo) {
   return true;
 }
 
+// Aulas de uma UC dentro de um período (quando o "mapão" da escola põe a UC em datas
+// diferentes da sequência calculada): mesmos dias da semana, horas por aula e feriados.
+function aulasNoPeriodo(cfg, uc, periodo) {
+  if (!cfg || !periodo?.de) return [];
+  const total = horas(uc.cargaHoraria);
+  const aulas = [];
+  let d = new Date(periodo.de), restante = total;
+  for (let guarda = 0; guarda < 3000 && restante > 0.001; guarda++, d = somaDias(d, 1)) {
+    if (periodo.ate && d > periodo.ate) break;
+    if (!cfg.dias.includes(d.getDay())) continue;
+    const k = chaveData(d);
+    if (feriadosNacionais(d.getFullYear()).get(k) || cfg.semAula?.has(k)) continue;
+    const ch = Math.min(cfg.horasAula, restante);
+    aulas.push({ data: new Date(d), ch });
+    restante -= ch;
+  }
+  return aulas;
+}
+
 export function cronogramaDaUc(crono, nomeUc, periodo = null) {
   const u = crono?.ucs.find((x) => x.nome === nomeUc);
   if (!u) return null;
-  const minhas = u.aulas.map((a, i) => ({ ...a, n: i + 1 })).filter((a) => noPeriodo(a.data, periodo));
-  if (!minhas.length) return { vazio: true, total: u.aulas.length };
-  const parcial = minhas.length < u.aulas.length;
+  const total = u.aulas.length;
+  let minhas = u.aulas.map((a, i) => ({ ...a, n: i + 1 })).filter((a) => noPeriodo(a.data, periodo));
+  let noMapao = false;
+  // A UC não cai no período pela sequência calculada: o período informado é quando ela acontece.
+  if (!minhas.length && periodo?.de) {
+    minhas = aulasNoPeriodo(crono.cfg, u, periodo).map((a, i) => ({ ...a, n: i + 1 }));
+    noMapao = true;
+  }
+  if (!minhas.length) return { vazio: true, total };
   return {
     dataInicio: dataBr(minhas[0].data),
     dataTermino: dataBr(minhas.at(-1).data),
     aulas: minhas.map((a) => ({ data: dataBr(a.data), ch: `${String(a.ch).replace(".", ",")}h` })),
-    total: u.aulas.length, primeira: minhas[0].n, ultima: minhas.at(-1).n, parcial,
+    total, primeira: minhas[0].n, ultima: minhas.at(-1).n, noMapao,
+    // Parcial = outro instrutor deu as aulas anteriores (o instrutor não começa na aula 1).
+    parcial: minhas[0].n > 1,
+    incompleta: minhas.at(-1).n < total,
   };
 }
 

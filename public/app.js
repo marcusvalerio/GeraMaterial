@@ -1,4 +1,4 @@
-import { montarCronograma, cronogramaDaUc, lerDiasSemAula, dataBr, noPeriodo } from "./cronograma.js";
+import { montarCronograma, cronogramaDaUc, lerDiasSemAula, dataBr } from "./cronograma.js";
 import { iniciarPagina } from "./comum.js";
 
 // Sequência padrão: cada etapa usa o resultado das anteriores.
@@ -239,8 +239,10 @@ function resumoPeriodo() {
   const linhas = (escolhidas.length ? escolhidas : analise.ucs).map((u) => {
     const d = cronogramaDaUc(crono, u.nome, per);
     if (!d) return "";
-    return d.vazio ? `<li><strong>${esc(u.nome)}</strong>: nenhuma aula sua neste período</li>`
-      : `<li><strong>${esc(u.nome)}</strong>: aulas ${d.primeira} a ${d.ultima} de ${d.total} (${d.dataInicio} a ${d.dataTermino})</li>`;
+    if (d.vazio) return `<li><strong>${esc(u.nome)}</strong>: nenhuma aula sua neste período. Confira se a data inicial é um dia de aula.</li>`;
+    const falta = d.incompleta ? ` <em>O período não cobre a UC toda: faltam ${d.total - d.ultima} aula(s). Se ela continua depois, aumente o "Até".</em>` : "";
+    const origem = d.noMapao ? " · datas do seu período" : "";
+    return `<li><strong>${esc(u.nome)}</strong>: aulas ${d.primeira} a ${d.ultima} de ${d.total} (${d.dataInicio} a ${d.dataTermino})${origem}${falta}</li>`;
   }).join("");
   return `<div class="crono-minhas"><strong>Suas aulas</strong><ul>${linhas}</ul></div>`;
 }
@@ -273,7 +275,7 @@ function calcularCronograma() {
     ${resumoPeriodo()}
     <div class="tabela-rolagem"><table class="crono-tabela">
       <thead><tr><th>Unidade curricular</th><th class="num">Horas</th><th class="num">Aulas</th><th class="num">Início</th><th class="num">Término</th><th class="num">Semanas</th></tr></thead>
-      <tbody>${crono.ucs.map((u) => `<tr class="${escolhidas.has(u.nome) ? "escolhida" : ""}${periodo() && !u.aulas.some((x) => noPeriodo(x.data, periodo())) ? " fora" : ""}">
+      <tbody>${crono.ucs.map((u) => `<tr class="${escolhidas.has(u.nome) ? "escolhida" : ""}${periodo() && escolhidas.size && !escolhidas.has(u.nome) ? " fora" : ""}">
         <td>${esc(u.nome)}</td><td class="num">${u.horas}h</td><td class="num">${u.aulas.length}</td>
         <td class="num">${u.inicio ? dataBr(u.inicio) : "-"}</td><td class="num">${u.termino ? dataBr(u.termino) : "-"}</td><td class="num">${u.semanas}</td></tr>`).join("")}</tbody>
     </table></div>
@@ -314,8 +316,17 @@ async function salvarTurma() {
   }
   let n = 0;
   const per = periodo();
-  const aulas = crono.ucs.flatMap((u) => u.aulas.map((a, i) => ({ uc: u.nome, numero: ++n, numero_uc: i + 1, data: dataBr(a.data), ch: a.ch, d: a.data })))
-    .filter((a) => noPeriodo(a.d, per)).map(({ d, ...a }) => a);
+  let aulas;
+  if (!per) aulas = crono.ucs.flatMap((u) => u.aulas.map((a, i) => ({ uc: u.nome, numero: ++n, numero_uc: i + 1, data: dataBr(a.data), ch: a.ch })));
+  else {
+    // Com período: as aulas de cada UC escolhida (pela sequência ou pelas datas do período, como no mapão).
+    const alvo = ucsEscolhidas().length ? ucsEscolhidas() : crono.ucs;
+    aulas = alvo.flatMap((u) => {
+      const d = cronogramaDaUc(crono, u.nome, per);
+      if (!d || d.vazio) return [];
+      return d.aulas.map((a, i) => ({ uc: u.nome, numero: ++n, numero_uc: d.primeira + i, data: a.data, ch: Number(String(a.ch).replace(",", ".").replace("h", "")) }));
+    });
+  }
   if (!aulas.length) { avisar("Nenhuma aula sua no período informado. Confira as datas de participação.", true); return; }
   const dados = {
     analise: { ...analise, referencia: undefined }, referencia: analise.referencia || "",
