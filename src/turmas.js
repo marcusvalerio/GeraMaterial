@@ -259,7 +259,8 @@ ${entregas.map((e) => `MATERIAL JÁ GERADO (${e.etapa}):\n${JSON.stringify(e.con
             (SELECT max(data) FROM aulas a WHERE a.turma_id = t.id) AS termino
           FROM turmas t JOIN usuarios u ON u.id = t.usuario_id ORDER BY atrasadas DESC, t.criado_em DESC`,
       sql`SELECT (SELECT count(*)::int FROM usuarios WHERE aprovado) AS instrutores,
-                 (SELECT count(*)::int FROM usuarios WHERE NOT aprovado) AS pendentes,
+                 (SELECT count(*)::int FROM usuarios WHERE NOT aprovado) AS bloqueadas,
+                 (SELECT count(*)::int FROM usuarios WHERE aprovado AND nova_senha) AS primeiro_acesso,
                  (SELECT count(*)::int FROM turmas) AS turmas,
                  (SELECT count(*)::int FROM sequencias WHERE criado_em > now() - interval '30 days') AS materiais_mes`,
     ]);

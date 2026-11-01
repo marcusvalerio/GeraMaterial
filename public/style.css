@@ -493,9 +493,6 @@ html, body { overflow-x: hidden; }
   .lista-materiais li > div { flex-basis: 100%; }
   .item-seq-link { padding: 14px 16px 14px; }
   .item-seq .link-remover { position: static; margin: 0 16px 12px; }
-  .secao-painel .tabela-rolagem .tabela { min-width: 640px; }
-  .secao-painel #acessos { overflow-x: auto; }
-  .secao-painel #acessos .tabela { min-width: 640px; }
   .faixa-turma { font-size: .88rem; }
 }
 /* Nenhum bloco do formulário pode empurrar a largura da tela */
@@ -598,14 +595,6 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 .caixa-senha { border: 1px solid var(--linha); background: var(--folha); border-radius: var(--raio-g); padding: 14px 16px; margin-bottom: 16px; }
 .caixa-senha code { font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; user-select: all; }
 .caixa-senha button { margin-right: 8px; margin-top: 6px; }
-@media (max-width: 700px) {
-  #acessos table, #acessos tbody, #acessos tr, #acessos td { display: block; width: 100%; }
-  #acessos thead { display: none; }
-  #acessos tr { border: 1px solid var(--linha); border-radius: var(--raio-g); padding: 10px 12px; margin-bottom: 10px; background: var(--folha); }
-  #acessos tr.pendente { background: var(--amarelo-claro); }
-  #acessos td { border: 0; padding: 3px 0; overflow-wrap: anywhere; }
-  #acessos td:first-child { font-weight: 700; }
-}
 
 /* =====================================================================
    Organização visual: um espaçamento (--esp), dois raios (--raio, --raio-g)
@@ -738,3 +727,29 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
   /* indicadores: o último cartão sozinho ocupa a linha inteira */
   .indicadores > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
+
+/* ---------- Tabelas do Painel ---------- */
+.titulo-linha strong, .titulo-linha .link-linha { display: block; font-family: var(--ui); font-weight: 600; }
+.titulo-linha small { display: block; color: var(--tinta-3); font-size: .8rem; margin-top: 2px; }
+.link-linha { color: var(--tinta); text-decoration: none; }
+.link-linha:hover { color: var(--azul); }
+.acoes-conta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.acoes-conta .btn-secundario { padding: 7px 12px; font-size: .82rem; }
+.tabela .selo-situacao { white-space: nowrap; }
+@media (max-width: 760px) {
+  /* no celular, cada linha vira um cartão com rótulo ao lado de cada valor */
+  .tabela-rolagem:has(.tabela-cartoes) { margin: 0; padding: 0; overflow: visible; }
+  .tabela-cartoes, .tabela-cartoes tbody, .tabela-cartoes tr, .tabela-cartoes td { display: block; width: 100%; }
+  .tabela-cartoes { background: none; border: 0; border-radius: 0; overflow: visible; min-width: 0 !important; }
+  .tabela-cartoes thead { display: none; }
+  .tabela-cartoes tr { background: var(--folha); border: 1px solid var(--linha); border-radius: var(--raio-g); padding: 6px 16px 10px; margin-bottom: 10px; }
+  .tabela-cartoes tr.pendente td { background: none; }
+  .tabela-cartoes td { border: 0; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: right; }
+  .tabela-cartoes td + td { border-top: 1px solid var(--linha); }
+  .tabela-cartoes td[data-rot]::before { content: attr(data-rot); color: var(--tinta-3); font-family: var(--ui); font-size: .8rem; font-weight: 600; text-align: left; }
+  .tabela-cartoes td.titulo-linha { display: block; text-align: left; padding-top: 10px; }
+  .tabela-cartoes td.acoes-linha { display: block; text-align: left; }
+  .tabela-cartoes select { max-width: 60%; }
+  .acoes-conta .btn-secundario { flex: 1; text-align: center; }
+}
+.titulo-linha strong small { display: inline; margin: 0; }

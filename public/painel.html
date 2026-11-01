@@ -62,33 +62,37 @@ if (usuario && !["admin", "coordenador"].includes(usuario.papel)) location.href 
 
 const PAPEIS = { admin: "Administrador", coordenador: "Coordenação", instrutor: "Instrutor(a)" };
 
+// Célula com rótulo: no celular cada linha vira um cartão e o rótulo aparece ao lado do valor.
+const td = (rot, html, cls = "") => `<td data-rot="${rot}"${cls ? ` class="${cls}"` : ""}>${html}</td>`;
+
 async function carregar() {
   const { instrutores, turmas, totais } = await api("/api/painel");
   $("#totais").innerHTML = `
     <div><strong>${totais.instrutores}</strong><span>contas ativas</span></div>
-    <div class="${totais.pendentes ? "atencao" : ""}"><strong>${totais.pendentes}</strong><span>aguardando liberação</span></div>
+    <div class="${totais.primeiro_acesso ? "atencao" : ""}"><strong>${totais.primeiro_acesso}</strong><span>sem primeiro acesso</span></div>
     <div><strong>${totais.turmas}</strong><span>turmas</span></div>
-    <div><strong>${totais.materiais_mes}</strong><span>sequências geradas em 30 dias</span></div>`;
+    <div><strong>${totais.materiais_mes}</strong><span>sequências em 30 dias</span></div>`;
 
-  $("#turmas").innerHTML = turmas.length ? `<table class="tabela"><thead><tr><th>Turma</th><th>Instrutor(a)</th><th class="num">Aulas dadas</th>
+  $("#turmas").innerHTML = turmas.length ? `<table class="tabela tabela-cartoes"><thead><tr><th>Turma</th><th>Instrutor(a)</th><th class="num">Aulas dadas</th>
     <th class="num">Sem registro</th><th class="num">Alunos</th><th class="num">Frequência</th><th class="num">UCs com material</th><th class="num">Término</th></tr></thead>
     <tbody>${turmas.map((t) => `<tr>
-      <td><a href="turmas.html?id=${t.id}"><strong>${esc(t.nome)}</strong></a><br><small>${esc(t.curso)}</small></td>
-      <td>${esc(t.instrutor)}</td>
-      <td class="num">${t.realizadas}/${t.aulas}</td>
-      <td class="num ${t.atrasadas > 2 ? "alerta" : t.atrasadas ? "atencao-txt" : ""}">${t.atrasadas}</td>
-      <td class="num">${t.alunos}</td>
-      <td class="num ${t.frequencia !== null && t.frequencia < 75 ? "alerta" : ""}">${t.frequencia === null ? "-" : t.frequencia + "%"}</td>
-      <td class="num">${t.sequencias}</td>
-      <td class="num">${dataBrIso(t.termino)}</td></tr>`).join("")}</tbody></table>`
+      <td class="titulo-linha"><a class="link-linha" href="turmas.html?id=${t.id}">${esc(t.nome)}</a><small>${esc(t.curso)}</small></td>
+      ${td("Instrutor(a)", esc(t.instrutor))}
+      ${td("Aulas dadas", `${t.realizadas}/${t.aulas}`, "num")}
+      ${td("Sem registro", t.atrasadas, `num ${t.atrasadas > 2 ? "alerta" : t.atrasadas ? "atencao-txt" : ""}`)}
+      ${td("Alunos", t.alunos, "num")}
+      ${td("Frequência", t.frequencia === null ? "-" : t.frequencia + "%", `num ${t.frequencia !== null && t.frequencia < 75 ? "alerta" : ""}`)}
+      ${td("UCs com material", t.sequencias, "num")}
+      ${td("Término", dataBrIso(t.termino), "num")}</tr>`).join("")}</tbody></table>`
     : `<p class="dica-aba">Nenhuma turma criada ainda.</p>`;
 
-  $("#instrutores").innerHTML = `<table class="tabela"><thead><tr><th>Nome</th><th>Papel</th><th class="num">Turmas</th>
+  $("#instrutores").innerHTML = `<table class="tabela tabela-cartoes"><thead><tr><th>Nome</th><th>Papel</th><th class="num">Turmas</th>
     <th class="num">Sequências geradas</th><th class="num">Aulas sem registro</th><th class="num">Último material</th></tr></thead>
-    <tbody>${instrutores.map((i) => `<tr><td>${esc(i.nome)}<br><small>${esc(i.email)}</small></td><td>${PAPEIS[i.papel]}</td>
-      <td class="num">${i.turmas}</td><td class="num">${i.sequencias}</td>
-      <td class="num ${i.atrasadas > 2 ? "alerta" : ""}">${i.atrasadas}</td>
-      <td class="num">${i.ultimo_material ? new Date(i.ultimo_material).toLocaleDateString("pt-BR") : "-"}</td></tr>`).join("")}</tbody></table>`;
+    <tbody>${instrutores.map((i) => `<tr><td class="titulo-linha"><strong>${esc(i.nome)}</strong><small>${esc(i.email)}</small></td>
+      ${td("Papel", PAPEIS[i.papel])}
+      ${td("Turmas", i.turmas, "num")}${td("Sequências geradas", i.sequencias, "num")}
+      ${td("Aulas sem registro", i.atrasadas, `num ${i.atrasadas > 2 ? "alerta" : ""}`)}
+      ${td("Último material", i.ultimo_material ? new Date(i.ultimo_material).toLocaleDateString("pt-BR") : "-", "num")}</tr>`).join("")}</tbody></table>`;
 }
 
 // Mostra a senha provisória uma única vez, com a mensagem pronta para enviar.
@@ -123,15 +127,21 @@ async function carregarAcessos() {
   if (usuario?.papel !== "admin") return;
   $("#secaoAcessos").hidden = false;
   const { itens } = await api("/api/admin/usuarios");
-  $("#acessos").innerHTML = `<table class="tabela"><thead><tr><th>Nome</th><th>E-mail</th><th>Criada em</th><th>Papel</th><th>Acesso</th><th></th></tr></thead>
+  // Situação da conta: ativa, sem primeiro acesso (senha provisória) ou bloqueada.
+  const situacao = (u) => !u.aprovado ? '<span class="selo-situacao atrasada">Bloqueada</span>'
+    : u.nova_senha ? '<span class="selo-situacao atencao">Sem primeiro acesso</span>' : '<span class="selo-situacao ok">Ativa</span>';
+  $("#acessos").innerHTML = `<table class="tabela tabela-cartoes"><thead><tr><th>Pessoa</th><th>Criada em</th><th>Papel</th><th>Situação</th><th>Ações</th></tr></thead>
     <tbody>${itens.map((u) => {
       const eu = u.id == usuario.id;
-      return `<tr class="${u.aprovado ? "" : "pendente"}"><td>${esc(u.nome)}${eu ? " <small>(você)</small>" : ""}</td><td>${esc(u.email)}</td>
-      <td>${new Date(u.criado_em).toLocaleDateString("pt-BR")}</td>
-      <td>${eu ? PAPEIS[u.papel] : `<select data-papel="${u.id}" aria-label="Papel de ${esc(u.nome)}">${Object.entries(PAPEIS).map(([k, v]) => `<option value="${k}"${k === u.papel ? " selected" : ""}>${v}</option>`).join("")}</select>`}</td>
-      <td>${eu ? "Liberado" : u.aprovado ? `<button type="button" class="btn-secundario" data-bloquear="${u.id}">Bloquear</button>`
-        : `<button type="button" class="btn-gerar btn-curto" data-liberar="${u.id}">Liberar acesso</button>`}</td>
-      <td>${eu ? "" : `${u.nova_senha ? `<small>Primeiro acesso pendente</small><br>` : ""}<button type="button" class="link-todas" data-novasenha="${u.id}" data-nome="${esc(u.nome)}" data-email="${esc(u.email)}">Nova senha provisória</button> `}${eu ? "" : `<button type="button" class="link-remover" data-excluir="${u.id}">Excluir</button>`}</td></tr>`;
+      const papel = eu ? PAPEIS[u.papel] : `<select data-papel="${u.id}" aria-label="Papel de ${esc(u.nome)}">${Object.entries(PAPEIS).map(([k, v]) => `<option value="${k}"${k === u.papel ? " selected" : ""}>${v}</option>`).join("")}</select>`;
+      const acoes = eu ? '<span class="dica-aba">Sua conta</span>' : `<div class="acoes-conta">
+        <button type="button" class="btn-secundario" data-novasenha="${u.id}" data-nome="${esc(u.nome)}" data-email="${esc(u.email)}">Nova senha provisória</button>
+        ${u.aprovado ? `<button type="button" class="btn-secundario" data-bloquear="${u.id}">Bloquear</button>` : `<button type="button" class="btn-secundario" data-liberar="${u.id}">Liberar</button>`}
+        <button type="button" class="link-remover" data-excluir="${u.id}">Excluir</button></div>`;
+      return `<tr class="${u.aprovado ? "" : "pendente"}">
+        <td class="titulo-linha"><strong>${esc(u.nome)}${eu ? " <small>(você)</small>" : ""}</strong><small>${esc(u.email)}</small></td>
+        ${td("Criada em", new Date(u.criado_em).toLocaleDateString("pt-BR"))}${td("Papel", papel)}${td("Situação", situacao(u))}
+        <td class="acoes-linha">${acoes}</td></tr>`;
     }).join("")}</tbody></table>`;
   const acao = async (id, corpo) => { try { await api(`/api/admin/usuarios/${id}`, { metodo: "PATCH", corpo }); await Promise.all([carregarAcessos(), carregar()]); } catch (e) { alert(e.message); } };
   document.querySelectorAll("[data-liberar]").forEach((b) => { b.onclick = () => acao(b.dataset.liberar, { aprovado: true }); });
