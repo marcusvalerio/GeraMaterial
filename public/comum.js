@@ -65,11 +65,14 @@ export async function iniciarPagina(atual) {
       <a class="marca" href="inicio.html" aria-label="gera.documento, início"><span class="selo" aria-hidden="true">g.</span><span class="nome">gera<span class="ponto">.</span>documento</span></a>
       <span class="tag-area" aria-hidden="true"><span class="selo">g.</span>${esc(ativa.nome)}</span>
       <nav class="menu-areas" aria-label="Áreas">${areas.map((a) => `<a href="${a.href}" data-area="${a.id}"${a.id === atual ? ' aria-current="page"' : ""}>${icone(a, 18)}<span>${a.nome}</span></a>`).join("")}</nav>
+      <button type="button" class="btn-tema" id="btnTema"></button>
       <details class="conta"><summary aria-label="Sua conta: ${esc(usuario.nome)}">${esc(usuario.nome.trim().charAt(0).toUpperCase())}</summary>
         <div class="conta-menu"><p><strong>${esc(usuario.nome)}</strong><span>${esc(usuario.email)}</span><span class="papel">${{ admin: "Administrador", coordenador: "Coordenação", instrutor: "Instrutor(a)" }[usuario.papel]}</span></p>
         <a class="conta-link" href="inicio.html?tour=1">Rever o tour</a>
+        <a class="conta-link" href="#" id="temaAuto" hidden>Tema: seguir o sistema</a>
         <a class="conta-link" href="fontes-gera-documento.zip" download>Baixar fonte Inter</a>
         <button type="button" id="btnSair">Sair</button></div></details>`;
+    montarBotaoTema();
     $("#btnSair").onclick = async () => { await api("/api/auth/sair", { metodo: "POST" }); location.href = "entrar.html"; };
   }
   // Barra de abas fixa embaixo (aparece só no celular, via CSS).
@@ -87,6 +90,42 @@ export async function iniciarPagina(atual) {
   }
   return usuario;
 }
+
+// ---------- Tema claro / escuro ----------
+// Sem escolha salva, segue o sistema (e acompanha quando ele muda). O botão fixa claro ou escuro.
+const midiaEscura = matchMedia("(prefers-color-scheme: dark)");
+const temaSalvo = () => { try { return localStorage.getItem("gd_tema"); } catch { return null; } };
+const ICONE_SOL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const ICONE_LUA = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+
+function aplicarTema() {
+  const tema = temaSalvo() || (midiaEscura.matches ? "escuro" : "claro");
+  document.documentElement.dataset.tema = tema;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", tema === "escuro" ? "#0d1424" : "#F3F5F8");
+  const b = $("#btnTema");
+  if (b) {
+    b.innerHTML = tema === "escuro" ? ICONE_SOL : ICONE_LUA;
+    b.setAttribute("aria-label", tema === "escuro" ? "Usar modo claro" : "Usar modo escuro");
+    b.title = b.getAttribute("aria-label");
+  }
+  const auto = $("#temaAuto");
+  if (auto) auto.hidden = !temaSalvo();
+}
+function montarBotaoTema() {
+  $("#btnTema").onclick = () => {
+    const novo = document.documentElement.dataset.tema === "escuro" ? "claro" : "escuro";
+    try { localStorage.setItem("gd_tema", novo); } catch { /* sem storage */ }
+    aplicarTema();
+  };
+  $("#temaAuto").onclick = (e) => {
+    e.preventDefault();
+    try { localStorage.removeItem("gd_tema"); } catch { /* sem storage */ }
+    aplicarTema();
+  };
+  aplicarTema();
+}
+midiaEscura.addEventListener("change", aplicarTema);
+aplicarTema();
 
 // ---------- Tour ----------
 // Destaca uma parte da tela por vez, com um cartão explicando. Pula a qualquer momento.
