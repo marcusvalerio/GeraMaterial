@@ -1,7 +1,7 @@
 # Auditoria de qualidade dos materiais — GeraMaterial
 
 ## Objetivo
-Avaliar a qualidade pedagógica, técnica e editorial dos materiais gerados pelo GeraMaterial, usando materiais de referência reais do SENAI fornecidos pelo instrutor. Esta etapa estabelece critérios de avaliação; não altera os prompts nem o comportamento da aplicação.
+Avaliar a qualidade pedagógica, técnica e editorial dos materiais gerados pelo GeraMaterial, usando materiais de referência reais do SENAI fornecidos pelo instrutor. Esta etapa estabelece critérios de avaliação e registra a primeira melhoria controlada no prompt de geração dos slides: maior profundidade por encontro, com distribuição didática do tempo.
 
 ## Dimensões de avaliação
 
@@ -64,4 +64,4 @@ Cada nota deve vir acompanhada de evidência. Não atribuir nota apenas por apar
 Não alterar prompts ou lógica de geração com base em um único exemplo isolado. Priorizar problemas reproduzíveis, documentar a evidência e validar a correção com o mesmo caso e pelo menos um segundo caso de referência.
 
 ## Limites desta branch
-Esta branch prepara o protocolo de avaliação e permite testar a versão atual em Preview. Não modifica a experiência dos instrutores nem a produção. Qualquer mudança funcional será implementada e validada separadamente antes de eventual promoção.
+Esta branch contém o protocolo de avaliação e uma alteração isolada no prompt dos slides. A meta inicial é 10 a 14 slides por encontro de 4 horas, ajustando proporcionalmente a duração e respeitando encontros reservados a avaliações. A produção permanece intocada. A alteração deve ser validada com os materiais de referência antes de qualquer promoção.
