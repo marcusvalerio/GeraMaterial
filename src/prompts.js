@@ -43,10 +43,15 @@ export const ETAPAS = {
   },
   slides: {
     nome: "Slides da aula (PPTX)",
-    instrucao: `Com base no PER e no Plano de Aula, crie a apresentação da aula (18 a 26 slides), no estilo editorial do SENAI:
-objetiva, organizada em BLOCOS de conteúdo, com exemplos reais do mundo do trabalho. PROIBIDO usar emojis em qualquer texto. Use exatamente os nomes de campos em português indicados abaixo.
+    instrucao: `Com base no PER e no Plano de Aula, crie uma apresentação DIDÁTICA E COMPLETA para todos os encontros previstos no calendário, no estilo editorial do SENAI.
+A apresentação deve sustentar encontros de aproximadamente 4 horas, sem ficar restrita a um resumo de tópicos. Gere como referência 10 a 14 slides por encontro de 4 horas (proporcionalmente menos ou mais para encontros de outra duração), além de capa, síntese geral e referências. Para uma UC com 5 encontros de 4 horas, espere aproximadamente 50 a 70 slides no total. Não reduza artificialmente o material para caber em 18 a 26 slides.
+Organize cada encontro em uma sequência própria: abertura e objetivos; retomada ou contextualização; explicação progressiva dos conceitos; detalhamento técnico dos conhecimentos previstos; exemplos concretos do mundo do trabalho; demonstração ou resolução passo a passo quando aplicável; situação-problema ou estudo de caso; atividade de aplicação dos alunos; discussão/correção ou análise dos resultados; verificação da aprendizagem e síntese do encontro.
+Distribua o conteúdo para ocupar pedagogicamente o tempo real do encontro. Como referência, em 4 horas inclua momentos variados de exposição dialogada, análise de exemplos, demonstração, prática orientada, discussão e síntese. Não invente duração de atividade incompatível com o plano. Quando houver avaliação prevista no PER, respeite sua data e reserve o encontro para ela, sem fingir que é aula expositiva comum.
+Cada slide deve desenvolver uma ideia útil, com explicação suficiente para o instrutor ensinar e o aluno compreender. Evite slides telegráficos compostos apenas por palavras-chave, definições de uma linha, cards repetitivos ou frases genéricas. Não transforme cada frase em um slide para inflar a contagem: profundidade e progressão didática importam mais que volume.
+Use exemplos, cálculos, cenários, decisões operacionais e consequências sempre que o conteúdo permitir. Quando houver procedimento, apresente etapas, cuidados, critérios e erros comuns. Quando houver comparação, explicite em que situação cada alternativa é adequada e suas limitações. Não invente normas, números, dados, referências ou capacidades que não estejam apoiados no documento de referência; sinalize exemplos hipotéticos como exemplos.
+PROIBIDO usar emojis em qualquer texto. Use exatamente os nomes de campos em português indicados abaixo.
 Ícones: use SOMENTE nomes desta lista no campo "icone": ${ICONES.join(", ")}.
-Cada slide tem "olho" (rótulo curto acima do título, ex.: "BLOCO 1 · FUNDAMENTOS") e textos curtos. JSON:
+Cada slide tem "olho" (rótulo curto acima do título, ex.: "AULA 01 · BLOCO 1") e textos objetivos, mas suficientemente explicativos. Alterne os layouts conforme a função didática; não use cards em sequência como solução para todo conteúdo. Identifique claramente a aula em cada slide do encontro correspondente. Inclua atividades e perguntas ao longo da apresentação, não apenas no encerramento. JSON:
 { "titulo": "", "rodape": "Curso | Unidade Curricular", "professor": "Professor(a) Nome", "slides": [ ... ] }
 Layouts disponíveis ("layout") e seus campos:
 - "capa" (1º slide): { olho: "SENAI · CURSO", contexto: "UC", modulo: "MÓDULO X", titulo, professor, subtitulo: "Carga horária...",
