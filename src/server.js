@@ -9,7 +9,6 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto } from "./prompts.js";
 import { gerarDocx, gerarPdf } from "./exportar.js";
-import { gerarSlides } from "./slides.js";
 import { gerarCronograma } from "./cronograma.js";
 import { gerarPER, gerarEP190 } from "./planilhas.js";
 import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, podeEditarSequencia, bancoAtivo } from "./db.js";
@@ -151,7 +150,6 @@ const EXPORTADORES = {
   cronograma: [gerarCronograma, XLSX, "xlsx"],
   docx: [gerarDocx, DOCX, "docx"],
   pdf: [gerarPdf, "application/pdf", "pdf"],
-  pptx: [gerarSlides, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
 };
 
 app.post("/api/exportar/:formato", exigeLogin, async (req, res) => {
