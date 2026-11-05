@@ -7,8 +7,6 @@ const ETAPAS = [
     downloads: (r) => [["Baixar PER", "per", r, "PER"]] },
   { id: "plano", nome: "Plano de Aula (EP-190)", formato: "Excel",
     downloads: (r) => [["Baixar EP-190", "ep190", r, "EP-190"]] },
-  { id: "slides", nome: "Slides da aula", formato: "PowerPoint",
-    downloads: (r) => [["Baixar slides", "pptx", r, r.titulo || "Slides"]] },
   { id: "avaliacao", nome: "Avaliações 30 e 60 pontos", formato: "Word e PDF",
     downloads: (r, it) => {
       const cab = (pts) => cabecalhoProva(it, pts);
@@ -246,7 +244,7 @@ function aplicarModoUc() {
     resumo.hidden = !comLista;
     resumo.textContent = n ? `Unidades escolhidas: ${ucsEscolhidas().map((u) => u.nome).join(", ")}` : "Escolha as unidades curriculares no passo 1.";
   }
-  $("#btnGerar").textContent = n > 1 ? `Gerar materiais de ${n} unidades curriculares` : "Gerar os cinco materiais";
+  $("#btnGerar").textContent = n > 1 ? `Gerar materiais de ${n} unidades curriculares` : "Gerar os quatro materiais";
 }
 
 // ---------- Calendário da turma ----------
@@ -711,8 +709,6 @@ function abrirPrevia(et, r) {
   let html;
   if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60);
   else if (et.id === "atividade") html = htmlDoc(r.teorica) + htmlDoc(r.pratica);
-  else if (et.id === "slides") html = (r.slides || []).map((sl, i) => `<div class="previa-slide"><small>${i + 1}${sl.olho ? ` · ${esc(sl.olho)}` : ""}</small>
-      <strong>${esc(sl.titulo || "")}</strong>${textosDe(sl).slice(0, 8).map((t) => `<p>${esc(t)}</p>`).join("")}</div>`).join("");
   else html = htmlGenerico(r);
   $("#previaTitulo").textContent = et.nome;
   $("#previaCorpo").innerHTML = html || "<p>Sem conteúdo para mostrar.</p>";

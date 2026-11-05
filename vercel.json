@@ -3,7 +3,7 @@
   "functions": {
     "src/server.js": {
       "maxDuration": 300,
-      "includeFiles": "{modelos/**,assets/**,node_modules/lucide-static/icons/**}"
+      "includeFiles": "{modelos/**,assets/**}"
     }
   },
   "redirects": [

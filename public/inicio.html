@@ -27,7 +27,7 @@
   </section>
   <nav class="home-grade" id="cartoes" aria-label="Resumo"></nav>
   <a class="home-cta" href="index.html" data-tour="gerar">
-    <span><strong>Gerar novo material</strong><span>Do plano de curso aos 5 materiais da sequência</span></span>
+    <span><strong>Gerar novo material</strong><span>Do plano de curso aos 4 materiais da sequência</span></span>
     <span class="seta" aria-hidden="true">→</span>
   </a>
   <div class="inicio-grade">
@@ -38,7 +38,7 @@
 <script type="module">
 import { $, esc, api, iniciarPagina, AREAS, icone } from "./comum.js";
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-const ET = ["per", "plano", "slides", "avaliacao", "atividade"];
+const ET = ["per", "plano", "avaliacao", "atividade"];
 const area = (id) => AREAS.find((a) => a.id === id);
 const dataCurta = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
@@ -50,7 +50,7 @@ if (usuario) {
   const hoje = new Date().toLocaleDateString("en-CA");
   const aulasHoje = proximas.filter((a) => a.data === hoje).length;
   const pend = pendentes.reduce((s, p) => s + p.aulas, 0);
-  const incompletos = materiais.filter((m) => m.etapas.filter((e) => ET.includes(e)).length < 5);
+  const incompletos = materiais.filter((m) => m.etapas.filter((e) => ET.includes(e)).length < 4);
   $("#resumo").textContent = aulasHoje ? `Você tem ${aulasHoje === 1 ? "1 aula" : `${aulasHoje} aulas`} hoje.`
     : totais.turmas || totais.materiais ? "Aqui está o resumo do seu trabalho." : "Comece gerando os materiais da sua primeira unidade curricular.";
 
@@ -74,7 +74,7 @@ if (usuario) {
       ${a.data === hoje ? '<span class="selo-hoje">Hoje</span>' : ""}</a></li>`).join("")
     : `<li><p class="vazio-home">${totais.turmas ? "Nenhuma aula marcada pela frente." : 'Nenhuma turma ainda. Ao gerar materiais, salve a turma no passo "Quando é a sua UC?".'}</p></li>`;
   $("#recentes").innerHTML = materiais.length ? materiais.slice(0, 5).map((s) => `<li><a href="index.html?sequencia=${s.id}">
-      <span class="dia"><strong>${s.etapas.filter((e) => ET.includes(e)).length}</strong><small>de 5</small></span>
+      <span class="dia"><strong>${s.etapas.filter((e) => ET.includes(e)).length}</strong><small>de 4</small></span>
       <span class="txt"><strong>${esc(s.uc)}</strong><span>${esc(s.curso)} · ${new Date(s.criado_em).toLocaleDateString("pt-BR")}</span></span></a></li>`).join("")
     : `<li><p class="vazio-home">Nenhum material ainda. <a href="index.html">Gerar agora</a>.</p></li>`;
 }

@@ -192,7 +192,7 @@ function renderMateriais() {
   $("#aba-materiais").innerHTML = `<ul class="lista-materiais">${ucs.map((uc) => {
     const seq = sequencias.filter((s) => s.uc === uc).at(-1);
     const completo = seq && seq.etapas.length >= 5;
-    return `<li><div><strong>${esc(uc)}</strong><span>${seq ? `${seq.etapas.length} de 5 materiais · gerado em ${new Date(seq.criado_em).toLocaleDateString("pt-BR")}` : "Ainda sem materiais"}</span></div>
+    return `<li><div><strong>${esc(uc)}</strong><span>${seq ? `${seq.etapas.filter((e) => e !== "slides").length} de 4 materiais · gerado em ${new Date(seq.criado_em).toLocaleDateString("pt-BR")}` : "Ainda sem materiais"}</span></div>
       ${seq ? `<a class="btn-secundario" href="index.html?sequencia=${seq.id}">Abrir materiais</a>` : ""}
       ${completo ? "" : `<a class="btn-secundario" href="index.html?turma=${turma.id}">${seq ? "Completar" : "Gerar"}</a>`}</li>`;
   }).join("")}</ul>`;

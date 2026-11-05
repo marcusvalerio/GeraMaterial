@@ -33,7 +33,7 @@
 </main>
 <script type="module">
 import { $, esc, api, iniciarPagina } from "./comum.js";
-const ETAPAS = [["per", "PER"], ["plano", "EP-190"], ["slides", "Slides"], ["avaliacao", "Avaliações"], ["atividade", "Atividades"]];
+const ETAPAS = [["per", "PER"], ["plano", "EP-190"], ["avaliacao", "Avaliações"], ["atividade", "Atividades"]];
 const usuario = await iniciarPagina("materiais");
 
 async function carregar() {
@@ -52,7 +52,7 @@ async function carregar() {
         <span class="item-seq-uc">${esc(s.uc)}</span>
         <span class="item-seq-meta">${esc(s.curso)}${s.turma ? ` · ${esc(s.turma)}` : ""}${usuario.papel !== "instrutor" && s.instrutor ? ` · ${esc(s.instrutor)}` : ""}</span>
         <span class="chips">${ETAPAS.map(([id, nome]) => `<span class="chip${s.etapas.includes(id) ? " ok" : ""}">${nome}</span>`).join("")}</span>
-        <span class="item-seq-data">${feitas.length} de 5 · ${new Date(s.criado_em).toLocaleDateString("pt-BR")}</span>
+        <span class="item-seq-data">${feitas.length} de 4 · ${new Date(s.criado_em).toLocaleDateString("pt-BR")}</span>
       </a>
       <button type="button" class="link-remover" data-excluir="${s.id}" aria-label="Excluir ${esc(s.uc)}">Excluir</button>
     </li>`;
