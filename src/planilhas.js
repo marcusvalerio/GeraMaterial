@@ -136,7 +136,6 @@ const MARCA_ESTRATEGIA = {
 export function gerarEP190(p) {
   const fl1 = {
     F7: p.segmento, F8: p.uc, F9: p.curso, F10: p.instrutor, L12: p.numero,
-    C14: " ", E14: " ", G14: " ", I14: " ",
     B18: `Contextualização: ${p.contextualizacaoTitulo ?? ""}`,
     B19: p.contextualizacao,
     B22: lista(p.desafio),
@@ -144,15 +143,28 @@ export function gerarEP190(p) {
   };
   const marca = MARCA_ESTRATEGIA[String(p.estrategia || "").toLowerCase()] || "C14";
   fl1[marca] = "X";
-  const fl2 = {
-    B9: lista(p.capacidades), C9: lista(p.conhecimentos),
-    D9: p.criterio || "Qualitativo e Quantitativo",
-    E9: p.critico === false ? " " : "X", F9: p.desejavel === false ? " " : "X",
+  // Uma capacidade por linha (linhas 9 a 36 do modelo); os conhecimentos são repartidos entre elas.
+  const caps = (Array.isArray(p.capacidades) ? p.capacidades : [p.capacidades]).filter(Boolean).slice(0, 28);
+  const cons = (Array.isArray(p.conhecimentos) ? p.conhecimentos : [p.conhecimentos]).filter(Boolean);
+  const fl2 = {};
+  const linhasTabela = Math.max(caps.length, cons.length ? 1 : 0);
+  for (let i = 0; i < linhasTabela; i++) {
+    const r = 9 + i;
+    const meus = cons.slice(Math.floor((i * cons.length) / linhasTabela), Math.floor(((i + 1) * cons.length) / linhasTabela));
+    Object.assign(fl2, {
+      [`B${r}`]: caps[i] || "", [`C${r}`]: meus.join("\n"),
+      [`D${r}`]: p.criterio || "Qualitativo e Quantitativo",
+      [`E${r}`]: p.critico === false ? "" : "X", [`F${r}`]: p.desejavel === false ? "" : "X",
+    });
+  }
+  Object.assign(fl2, {
     C39: p.materialConsumo, C40: p.ferramentas, C41: p.epis, C42: p.epcs,
     C43: p.equipamentos, C44: p.instrumentos, C45: lista(p.bibliografia),
     C48: p.data, C49: p.responsavel,
-  };
-  const anexos = { B33: "1 PASSO:", B34: " ", B35: " ", B36: " ", B37: " " };
-  (p.passos || []).slice(0, 25).forEach((t, i) => { anexos[`B${34 + i}`] = t; });
+  });
+  // Aba Anexos: o passo a passo da atividade, em tópicos (o modelo não traz mais fotos de exemplo).
+  const anexos = {};
+  const passos = (p.passos || []).filter(Boolean).slice(0, 31);
+  if (passos.length) { anexos.B33 = "PASSO A PASSO DA ATIVIDADE"; passos.forEach((t, i) => { anexos[`B${34 + i}`] = t; }); }
   return preencher("EP-190_MODELO.xlsm", { sheet1: fl1, sheet2: fl2, sheet3: anexos });
 }

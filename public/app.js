@@ -5,24 +5,31 @@ import { $, esc, iniciarPagina } from "./comum.js";
 const ETAPAS = [
   { id: "per", nome: "PER – Plano de Ensino e Recursos", formato: "Excel",
     downloads: (r) => [["Baixar PER", "per", r, "PER"]] },
-  { id: "plano", nome: "Plano de Aula (EP-190)", formato: "Excel",
-    downloads: (r) => [["Baixar EP-190", "ep190", r, "EP-190"]] },
-  { id: "avaliacao", nome: "Avaliações 30 e 60 pontos", formato: "Word e PDF",
+  { id: "plano", nome: "Plano de Aula", formato: "Word",
+    // Sequências antigas guardavam aqui o EP-190 (planilha); as novas, o plano de aula encontro por encontro.
+    downloads: (r, it) => (r.dias ? [["Plano de Aula · Word", "planoaula", { ...r, instrutor: r.instrutor || it?.dados?.instrutor, turma: r.turma || it?.dados?.turma }, "Plano de Aula"]]
+      : [["Baixar EP-190", "ep190", r, "EP-190"]]) },
+  { id: "avaliacao", nome: "Avaliações 30 e 60 pontos e gabarito", formato: "Word e PDF",
     downloads: (r, it) => {
       const cab = (pts) => cabecalhoProva(it, pts);
       const a30 = { ...r.avaliacao30, cabecalho: cab(30) }, a60 = { ...r.avaliacao60, cabecalho: cab(60) };
       return [
         ["Avaliação 30 · Word", "docx", a30, "Avaliacao 30 pontos"],
         ["Avaliação 60 · Word", "docx", a60, "Avaliacao 60 pontos"],
+        ...(r.gabarito ? [["Gabarito do professor · Word", "docx", r.gabarito, "Gabarito"]] : []),
         ["30 · PDF", "pdf", a30, "Avaliacao 30 pontos", true],
         ["60 · PDF", "pdf", a60, "Avaliacao 60 pontos", true],
       ];
     } },
-  { id: "atividade", nome: "Atividade do educador", formato: "Word",
-    downloads: (r) => [
+  { id: "atividade", nome: "Atividade do educador (EP-190)", formato: "Excel e Word",
+    // Antes: atividades teórica e prática em Word. Agora: EP-190 (situação de aprendizagem) + roteiro detalhado.
+    downloads: (r) => (r.teorica || r.pratica ? [
       ["Teórica · Word", "docx", r.teorica, "Atividade teorica"],
       ["Prática · Word", "docx", r.pratica, "Atividade pratica"],
-    ] },
+    ] : [
+      ["EP-190 · Excel", "ep190", r, "EP-190 Situacao de Aprendizagem"],
+      ...(r.roteiro ? [["Roteiro da atividade · Word", "docx", r.roteiro, "Roteiro da atividade"]] : []),
+    ]) },
 ];
 
 const nomeArquivo = (t) => String(t || "").replace(/[\\/:*?"<>|]/g, "").slice(0, 60).trim();
@@ -705,10 +712,20 @@ function htmlGenerico(o) {
   }).join("");
 }
 
+function htmlPlano(r) {
+  return `<h3>${esc(r.titulo || "Plano de Aula")}</h3><p><strong>${esc(r.uc)}</strong> · ${esc(r.cargaHoraria)} · ${esc(r.organizacao)}</p>
+    ${r.objetivoGeral ? `<h4>Objetivo geral</h4><p>${esc(r.objetivoGeral)}</p>` : ""}
+    ${(r.dias || []).map((d, i) => `<h4>Encontro ${d.numero || i + 1} – ${esc(d.titulo)} ${d.data ? `· ${esc(d.data)}` : ""}</h4>
+      <ul>${(d.conhecimentos || []).map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
+      <p><strong>Objetivo:</strong> ${esc(d.objetivo)}</p><p><strong>Estratégia MSEP:</strong> ${esc(d.estrategia)}</p>
+      <p><strong>Atividade:</strong> ${esc(d.atividade)}</p><p><strong>Avaliação:</strong> ${esc(d.avaliacao)}</p>`).join("")}`;
+}
+
 function abrirPrevia(et, r) {
   let html;
-  if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60);
-  else if (et.id === "atividade") html = htmlDoc(r.teorica) + htmlDoc(r.pratica);
+  if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60) + htmlDoc(r.gabarito);
+  else if (et.id === "atividade") html = r.teorica ? htmlDoc(r.teorica) + htmlDoc(r.pratica) : htmlGenerico({ ...r, roteiro: undefined }) + htmlDoc(r.roteiro);
+  else if (et.id === "plano" && r.dias) html = htmlPlano(r);
   else html = htmlGenerico(r);
   $("#previaTitulo").textContent = et.nome;
   $("#previaCorpo").innerHTML = html || "<p>Sem conteúdo para mostrar.</p>";

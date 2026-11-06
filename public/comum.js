@@ -136,7 +136,7 @@ function iniciarTour(gestor) {
   const area = (id) => `.abas-app a[data-area="${id}"], .menu-areas a[data-area="${id}"]`;
   const passos = [
     { titulo: "Bem-vindo(a) ao gera.documento", texto: "Em poucos passos você vê onde fica cada coisa. Leva menos de um minuto." },
-    { alvo: "[data-tour=gerar]", titulo: "Gerar materiais", texto: "Comece por aqui: envie o plano de curso, escolha a UC e responda algumas perguntas. Saem o PER, o plano de aula, as avaliações e a atividade." },
+    { alvo: "[data-tour=gerar]", titulo: "Gerar materiais", texto: "Comece por aqui: envie o plano de curso, escolha a UC e responda algumas perguntas. Saem o PER, o plano de aula, as avaliações com gabarito e a atividade do educador (EP-190)." },
     { alvo: area("materiais"), titulo: "Materiais", texto: "Tudo o que você gerou fica guardado aqui. Dá para baixar de novo e continuar uma geração que parou no meio." },
     { alvo: area("turmas"), titulo: "Turmas", texto: "Diário, frequência e notas de cada turma, com o roteiro de cada aula." },
     ...(gestor ? [{ alvo: area("painel"), titulo: "Painel", texto: "Andamento de todas as turmas, instrutores e o cadastro de acessos." }] : []),

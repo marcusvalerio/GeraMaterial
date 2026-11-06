@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto } from "./prompts.js";
 import { gerarDocx, gerarPdf } from "./exportar.js";
+import { gerarPlanoAula } from "./planoAula.js";
 import { gerarCronograma } from "./cronograma.js";
 import { gerarPER, gerarEP190 } from "./planilhas.js";
 import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, podeEditarSequencia, bancoAtivo } from "./db.js";
@@ -149,6 +150,7 @@ const EXPORTADORES = {
   ep190: [gerarEP190, "application/vnd.ms-excel.sheet.macroEnabled.12", "xlsm"],
   cronograma: [gerarCronograma, XLSX, "xlsx"],
   docx: [gerarDocx, DOCX, "docx"],
+  planoaula: [gerarPlanoAula, DOCX, "docx"],
   pdf: [gerarPdf, "application/pdf", "pdf"],
 };
 

@@ -6,10 +6,12 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const PROVEDORES = {
   gemini: { chave: "GEMINI_API_KEY", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    modelo: "gemini-flash-latest",
+    // Medido em nov/2026 com um plano de 15 encontros: os 3.x flash respondem em ~20 s;
+    // o gemini-flash-latest passou de 5 min (limite da Vercel), por isso fica só como última reserva.
+    modelo: "gemini-3.6-flash",
     // Cada modelo tem sua própria cota diária no plano gratuito: quando um esgota, passa para o próximo.
-    reservas: ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.5-flash-lite",
-      "gemini-3.1-flash-lite", "gemini-flash-lite-latest"] },
+    reservas: ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.5-flash-lite",
+      "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest"] },
   groq: { chave: "GROQ_API_KEY", url: "https://api.groq.com/openai/v1/chat/completions",
     modelo: "llama-3.3-70b-versatile" },
   openrouter: { chave: "OPENROUTER_API_KEY", url: "https://openrouter.ai/api/v1/chat/completions",

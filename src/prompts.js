@@ -1,5 +1,5 @@
-// Sequência de entregas (padrão): 1º PER, 2º Plano de Aula (EP-190), 3º PPTX,
-// 4º Avaliações (30 e 60 pontos), 5º Atividade do educador (teórica e prática).
+// Sequência de entregas: 1º PER (planilha), 2º Plano de Aula (Word, encontro por encontro),
+// 3º Avaliações de 30 e 60 pontos + gabarito do professor, 4º Atividade do educador (EP-190 + roteiro).
 // Base: MSEP + documento de referência enviado pelo instrutor.
 
 export const SISTEMA = `Você é um especialista pedagógico do SENAI, com domínio da Metodologia SENAI de Educação Profissional (MSEP):
@@ -29,8 +29,57 @@ export const ETAPAS = {
   "instrutor": "" }`,
   },
   plano: {
-    nome: "Plano de Aula (EP-190 – Situação de Aprendizagem)",
-    instrucao: `Com base no PER, elabore o Plano da Situação de Aprendizagem (formulário EP-190). JSON:
+    nome: "Plano de Aula",
+    instrucao: `Com base no PER, elabore o PLANO DE AULA da Unidade Curricular, DESTRINCHADO encontro por encontro.
+Regras:
+- Um bloco em "dias" para CADA encontro do calendário (use as datas informadas; sem calendário, divida a carga horária da UC
+  em encontros de 4 horas). Nunca agrupe vários encontros num bloco só.
+- Os conhecimentos vêm do documento de referência, numerados como tópicos e subtópicos (ex.: "1.1 Definição", "1.2 Etapas").
+  Todos os grupos de conhecimentos da UC precisam aparecer distribuídos pelos encontros.
+- Em cada encontro: objetivo claro (verbo no infinitivo), estratégia da MSEP (aula dialogada, estudo de caso, situação-problema,
+  projeto, simulação, oficina...), atividade concreta e detalhada que os alunos fazem, e como a aprendizagem é avaliada.
+- Reserve encontros para as avaliações de 30 e 60 pontos (a de 60 pontos no último encontro), coerentes com o formato escolhido.
+- "distribuicao" soma exatamente a carga horária da UC.
+JSON:
+{ "titulo": "PLANO DE AULA – SENAI", "uc": "", "curso": "", "cargaHoraria": "60 horas",
+  "organizacao": "15 encontros presenciais de 4 horas", "referencia": "Metodologia SENAI de Educação Profissional (MSEP)",
+  "objetivoGeral": "texto",
+  "distribuicao": [ { "grupo": "1. Nome do grupo de conhecimentos", "ch": "4h" } ],
+  "observacaoDistribuicao": "ex.: as 4 horas restantes são da avaliação integradora",
+  "dias": [ { "numero": 1, "data": "dd/mm/aaaa", "titulo": "Processo de Armazenagem", "horas": "4 horas",
+      "conhecimentos": ["1.1 Definição", "1.2 Etapas"], "objetivo": "", "estrategia": "", "atividade": "", "avaliacao": "" } ],
+  "organizacaoDiaria": [ { "etapa": "Contextualização e revisão", "tempo": "30 min", "desenvolvimento": "" } ],
+  "instrumentos": [ { "tipo": "Avaliação diagnóstica", "descricao": "" } ],
+  "recursos": "lista de recursos didáticos em texto corrido", "observacaoRecursos": "",
+  "resultadoEsperado": "texto" }`,
+  },
+  avaliacao: {
+    nome: "Avaliações (30 e 60 pontos) e gabarito",
+    instrucao: `Com base no PER e no Plano de Aula, elabore DUAS avaliações: uma valendo 30 pontos e outra valendo 60 pontos,
+e um GABARITO separado, só para o professor.
+Siga EXATAMENTE o "Formato das avaliações escolhido pelo instrutor" (informado acima) — não troque o formato.
+- Prova: exatamente o número de questões pedido; as primeiras são objetivas de múltipla escolha (alternativas a–e, contextualizadas)
+  e as demais discursivas, na quantidade indicada. A prova do aluno NÃO traz respostas.
+- Atividade em grupo: orientações para formar os grupos (alunos por grupo), o desafio, o que cada grupo entrega/apresenta,
+  tempo de preparo e de apresentação, e rubrica de avaliação por critérios.
+- Prática ou situação-problema: contexto real, tarefa, recursos, tempo e rubrica por critérios.
+Em todas: a soma das pontuações fecha exatamente 30 e 60, e há matriz de correção
+(Item | Capacidade | Critério | Crítico/Desejável | Pontos).
+GABARITO (documento do professor): uma seção para a avaliação de 30 e outra para a de 60. Para cada questão objetiva,
+a alternativa correta e uma justificativa curta; para cada discursiva, a resposta esperada e como distribuir os pontos
+(o que vale nota total, parcial ou zero); para atividade em grupo ou prática, o que se espera de cada critério da rubrica.
+Use uma tabela "Questão | Resposta | Pontos" quando houver questões objetivas.
+JSON: { "avaliacao30": ${DOC_GENERICO}, "avaliacao60": ${DOC_GENERICO}, "gabarito": ${DOC_GENERICO} }`,
+  },
+  atividade: {
+    nome: "Atividade do educador (EP-190 – Situação de Aprendizagem)",
+    instrucao: `Com base no PER e no Plano de Aula, elabore a SITUAÇÃO DE APRENDIZAGEM que o educador vai aplicar
+(formulário EP-190) e o ROTEIRO detalhado dela.
+- A situação de aprendizagem é desafiadora e realista, ligada ao tema e às capacidades da UC.
+- "passos": o passo a passo DESTRINCHADO em tópicos, na ordem em que acontece (ex.: "1. Apresentação do problema — ...",
+  "2. Formação dos grupos — ...", "2.1 ..."); entre 8 e 20 itens.
+- O roteiro (Word) detalha cada etapa: tempo, o que o docente faz, o que os alunos fazem, entregas e critérios de avaliação.
+JSON:
 { "segmento": "", "uc": "NOME DA UC + CH", "curso": "", "instrutor": "", "numero": "1",
   "estrategia": "Situação-problema" | "Estudo de Caso" | "Projeto" | "Pesquisa Aplicada",
   "contextualizacaoTitulo": "data (tema)", "contextualizacao": "texto do cenário",
@@ -38,26 +87,8 @@ export const ETAPAS = {
   "criterio": "Qualitativo e Quantitativo", "critico": true, "desejavel": true,
   "materialConsumo": "", "ferramentas": "", "epis": "", "epcs": "", "equipamentos": "", "instrumentos": "",
   "bibliografia": ["..."], "data": "dd/mm/aaaa", "responsavel": "",
-  "passos": ["etapas de desenvolvimento da atividade, para a aba Anexos"] }`,
-  },
-  avaliacao: {
-    nome: "Avaliações (30 e 60 pontos)",
-    instrucao: `Com base no PER e no Plano de Aula, elabore DUAS avaliações: uma valendo 30 pontos e outra valendo 60 pontos.
-Siga EXATAMENTE o "Formato das avaliações escolhido pelo instrutor" (informado acima) — não troque o formato.
-- Prova: exatamente o número de questões pedido; as primeiras são objetivas de múltipla escolha (alternativas a–e, contextualizadas)
-  e as demais discursivas, na quantidade indicada. Inclua gabarito comentado.
-- Atividade em grupo: orientações para formar os grupos (alunos por grupo), o desafio, o que cada grupo entrega/apresenta,
-  tempo de preparo e de apresentação, e rubrica de avaliação por critérios.
-- Prática ou situação-problema: contexto real, tarefa, recursos, tempo e rubrica por critérios.
-Em todas: a soma das pontuações fecha exatamente 30 e 60, e há matriz de correção
-(Item | Capacidade | Critério | Crítico/Desejável | Pontos).
-JSON: { "avaliacao30": ${DOC_GENERICO}, "avaliacao60": ${DOC_GENERICO} }`,
-  },
-  atividade: {
-    nome: "Atividade do educador (teórica e prática)",
-    instrucao: `Com base no Plano de Aula, elabore duas atividades para o educador aplicar: uma TEÓRICA e uma PRÁTICA.
-Cada uma com objetivo, capacidades, orientações, passo a passo, tempo, recursos, critérios de avaliação e resposta esperada.
-JSON: { "teorica": ${DOC_GENERICO}, "pratica": ${DOC_GENERICO} }`,
+  "passos": ["1. ..."],
+  "roteiro": ${DOC_GENERICO} }`,
   },
 };
 

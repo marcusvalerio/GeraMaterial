@@ -1,6 +1,6 @@
 // Converte o material (JSON genérico: titulo + secoes) em DOCX e PDF.
 import {
-  Document, Packer, Paragraph, HeadingLevel, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle,
+  Document, Packer, Paragraph, HeadingLevel, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, TableLayoutType,
 } from "docx";
 import PDFDocument from "pdfkit";
 
@@ -37,24 +37,43 @@ function cabecalhoDocx(c) {
   return [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: linhas }), new Paragraph("")];
 }
 
+// Tabela com colunas proporcionais ao conteúdo (antes: todas iguais, e a coluna de texto longo virava uma torre).
+const LARGURA_UTIL = 9360; // largura útil da página em twips (A4/Carta com margens padrão)
+function tabelaDocx(cabecalho, linhas) {
+  const n = cabecalho.length;
+  const peso = cabecalho.map((c, j) => {
+    const textos = [c, ...linhas.map((l) => l[j])].map((x) => String(x ?? ""));
+    const medio = textos.reduce((a, t) => a + t.length, 0) / textos.length;
+    return Math.min(70, Math.max(String(c ?? "").length * 1.15, medio, 7));
+  });
+  const soma = peso.reduce((a, b) => a + b, 0);
+  const larguras = peso.map((p) => Math.round((p / soma) * LARGURA_UTIL));
+  const borda = { style: BorderStyle.SINGLE, size: 4, color: "B8C2D0" };
+  const bordas = { top: borda, bottom: borda, left: borda, right: borda };
+  const linha = (cels, negrito) => new TableRow({
+    tableHeader: negrito,
+    children: Array.from({ length: n }, (_, i) => new TableCell({
+      borders: bordas,
+      width: { size: larguras[i], type: WidthType.DXA },
+      margins: { top: 50, bottom: 50, left: 90, right: 90 },
+      shading: negrito ? { fill: "E8EEF7" } : undefined,
+      children: [new Paragraph({ children: [new TextRun({ text: String(cels[i] ?? ""), bold: negrito, size: 19 })] })],
+    })),
+  });
+  return [
+    new Table({ width: { size: LARGURA_UTIL, type: WidthType.DXA }, columnWidths: larguras, layout: TableLayoutType.FIXED,
+      rows: [linha(cabecalho, true), ...linhas.map((l) => linha(l, false))] }),
+    new Paragraph(""),
+  ];
+}
+
 export async function gerarDocx(m) {
   const filhos = [...(m.cabecalho ? cabecalhoDocx(m.cabecalho) : []), new Paragraph({ text: m.titulo, heading: HeadingLevel.TITLE })];
   for (const s of m.secoes || []) {
     filhos.push(new Paragraph({ text: s.titulo, heading: HeadingLevel.HEADING_1 }));
     for (const p of s.paragrafos || []) filhos.push(new Paragraph({ children: [new TextRun(p)] }));
     for (const i of s.itens || []) filhos.push(new Paragraph({ text: i, bullet: { level: 0 } }));
-    if (s.tabela?.cabecalho?.length) {
-      const linha = (cels, negrito) => new TableRow({
-        children: cels.map((c) => new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: String(c ?? ""), bold: negrito })] })],
-        })),
-      });
-      filhos.push(new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [linha(s.tabela.cabecalho, true), ...(s.tabela.linhas || []).map((l) => linha(l, false))],
-      }));
-      filhos.push(new Paragraph(""));
-    }
+    if (s.tabela?.cabecalho?.length) filhos.push(...tabelaDocx(s.tabela.cabecalho, s.tabela.linhas || []));
   }
   return Packer.toBuffer(new Document({
     styles: {
