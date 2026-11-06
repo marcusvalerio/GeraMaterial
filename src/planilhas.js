@@ -49,7 +49,15 @@ function setCell(xml, ref, texto) {
   return xml.replace(reLinha, `<row r="${r}"${attrs}>${conteudo}</row>`);
 }
 
-async function preencher(arquivo, valoresPorAba) {
+// Dá à célula `ref` o mesmo estilo (fonte, alinhamento, bordas) da célula `modelo`.
+function copiarEstilo(xml, ref, modelo) {
+  const est = (xml.match(new RegExp(`<c r="${modelo}"(?=[\\s/>])[^>]*?\\ss="(\\d+)"`)) || [])[1];
+  if (!est) return xml;
+  return xml.replace(new RegExp(`<c r="${ref}"(?=[\\s/>])([^>]*?)(/?>)`), (m, attrs, fim) =>
+    `<c r="${ref}"${/\ss="\d+"/.test(attrs) ? attrs.replace(/\ss="\d+"/, ` s="${est}"`) : `${attrs} s="${est}"`}${fim}`);
+}
+
+async function preencher(arquivo, valoresPorAba, estilos = {}) {
   const zip = await JSZip.loadAsync(await readFile(path.join(MODELOS, arquivo)));
   for (const [aba, valores] of Object.entries(valoresPorAba)) {
     const caminho = `xl/worksheets/${aba}.xml`;
@@ -57,6 +65,7 @@ async function preencher(arquivo, valoresPorAba) {
     for (const [ref, v] of Object.entries(valores)) {
       if (v !== undefined && v !== null && v !== "") xml = setCell(xml, ref, v);
     }
+    for (const [ref, modelo] of Object.entries(estilos[aba] || {})) xml = copiarEstilo(xml, ref, modelo);
     zip.file(caminho, xml);
   }
   // Força o Excel a recalcular fórmulas ao abrir.
@@ -91,7 +100,11 @@ function distribuirAulas(aulas) {
     horas: g.reduce((s, a) => s + horasNum(a.ch), 0),
   }));
 }
-const PER_CONHEC = ["F16", "F21", "F26", "F30", "F38", "F48", "F51", "F54", "F55", "F60", "F64", "F68", "F72"];
+// Blocos de conhecimentos (as linhas 54 e 72 são faixas amarelas do modelo e ficam vazias).
+const PER_CONHEC = ["F16", "F21", "F26", "F30", "F38", "F48", "F51", "F55", "F60", "F64", "F68"];
+// Reparte uma lista em n grupos seguidos, do jeito mais equilibrado (nada fica de fora nem amontoado no fim).
+const repartir = (itens, n) => Array.from({ length: n }, (_, i) =>
+  itens.slice(Math.floor((i * itens.length) / n), Math.floor(((i + 1) * itens.length) / n)));
 
 export function gerarPER(p) {
   const v = {
@@ -106,8 +119,9 @@ export function gerarPER(p) {
     F11: `Data término da UC: ${p.dataTermino ?? ""}`,
     K11: `Turma: ${p.turma ?? ""}`,
     D12: p.objetivoUC,
-    C16: lista(p.capacidadesTecnicas),
-    I16: lista(p.estrategias),
+    // Capacidades e estratégias: o modelo tem dois blocos (linhas 16–53 e 55–71); metade em cada.
+    ...(() => { const [a, b] = repartir(p.capacidadesTecnicas || [], 2); return { C16: lista(a), C55: lista(b) }; })(),
+    ...(() => { const [a, b] = repartir(p.estrategias || [], 2); return { I16: lista(a), I55: lista(b) }; })(),
     L16: lista(p.criterios),
     C78: p.avaliacao30?.instrumento, I78: p.avaliacao30?.criterios, A78: p.avaliacao30?.data,
     C82: p.avaliacao60?.instrumento, I82: p.avaliacao60?.criterios, A82: p.avaliacao60?.data,
@@ -120,11 +134,9 @@ export function gerarPER(p) {
     const h = refsData.reduce((s, r) => s + (porCelula[r]?.horas || 0), 0);
     if (h) v[refCh] = fmtHoras(h);
   }
-  const conh = p.conhecimentos || [];
-  // Se houver mais conhecimentos que blocos, o último bloco recebe o restante.
-  PER_CONHEC.forEach((ref, i) => {
-    v[ref] = i === PER_CONHEC.length - 1 ? conh.slice(i).join("\n") : conh[i];
-  });
+  const conh = (p.conhecimentos || []).filter(Boolean);
+  const nBlocos = Math.min(PER_CONHEC.length, Math.max(conh.length, 1));
+  repartir(conh, nBlocos).forEach((g, i) => { if (g.length) v[PER_CONHEC[i]] = g.join("\n"); });
   return preencher("PER_MODELO.xlsx", { sheet1: v });
 }
 
@@ -166,5 +178,8 @@ export function gerarEP190(p) {
   const anexos = {};
   const passos = (p.passos || []).filter(Boolean).slice(0, 31);
   if (passos.length) { anexos.B33 = "PASSO A PASSO DA ATIVIDADE"; passos.forEach((t, i) => { anexos[`B${34 + i}`] = t; }); }
-  return preencher("EP-190_MODELO.xlsm", { sheet1: fl1, sheet2: fl2, sheet3: anexos });
+  // As linhas 10 a 36 do modelo vêm com fontes e alinhamentos diferentes: todas ficam iguais à linha 9.
+  const estilos2 = {};
+  for (let r = 10; r <= 36; r++) for (const c of "BCDEF") estilos2[`${c}${r}`] = `${c}9`;
+  return preencher("EP-190_MODELO.xlsm", { sheet1: fl1, sheet2: fl2, sheet3: anexos }, { sheet2: estilos2 });
 }
