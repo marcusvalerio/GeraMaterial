@@ -7,7 +7,7 @@
   --folha: #ffffff;
   --tinta: #12223f;
   --tinta-2: #4a5874;
-  --tinta-3: #8391a8;
+  --tinta-3: #66738b;
   --linha: #dde3ec;
   --azul: #0b4fa3;
   --azul-claro: #e6effa;
@@ -792,3 +792,57 @@ h1, h2, h3, .home-card .home-valor, .indicadores strong { letter-spacing: -.025e
 
 .pacote { margin-top: var(--esp-m); }
 .pacote button { width: 100%; }
+
+/* Editor da prévia e refazer encontro */
+.previa-topo { gap: var(--esp-p); }
+.previa-topo h2 { margin-right: auto; }
+button.mini { font-family: var(--ui); font-size: .8rem; font-weight: 600; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--linha); background: var(--folha); color: var(--azul); cursor: pointer; min-height: 32px; }
+button.mini:disabled { opacity: .6; }
+.enc-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; }
+.editor-campos { display: grid; gap: var(--esp-m); }
+.editor-campos label { margin: 0; font-size: .8rem; color: var(--tinta-3); }
+.editor-campos textarea { margin-top: 4px; font-size: .95rem; color: var(--tinta); resize: vertical; }
+.editor-acoes { position: sticky; bottom: 0; display: flex; gap: var(--esp-p); justify-content: flex-end; padding: var(--esp-m) 0 4px; background: var(--folha); }
+
+/* Materiais: barra de progresso em segmentos, status padronizado e menu ⋯ */
+.seg-barra { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 10px; }
+.seg { display: grid; gap: 4px; }
+.seg i { display: block; height: 6px; border-radius: 3px; background: var(--linha); }
+.seg.ok i { background: var(--verde); }
+.seg small { font-size: .7rem; color: var(--tinta-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg.ok small { color: var(--tinta-2); }
+.status { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-size: .78rem; padding: 2px 8px; border-radius: 999px; }
+.status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status.ok { color: var(--verde); background: var(--verde-claro); }
+.status.pendente { color: var(--ambar-txt); background: var(--amarelo-claro); }
+.status.erro { color: var(--erro); background: var(--erro-claro); }
+.item-seq { position: relative; }
+.menu-mais { position: absolute; top: 10px; right: 10px; }
+.menu-mais summary { list-style: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; cursor: pointer; font-size: 1.3rem; color: var(--tinta-2); }
+.menu-mais summary::-webkit-details-marker { display: none; }
+.menu-mais summary:hover, .menu-mais[open] summary { background: var(--papel); }
+.menu-mais-lista { position: absolute; right: 0; top: 46px; z-index: 5; min-width: 220px; background: var(--folha); border: 1px solid var(--linha); border-radius: var(--raio); box-shadow: 0 10px 30px #0b1d3f26; padding: 6px; display: grid; }
+.menu-mais-lista button { text-align: left; border: 0; background: none; padding: 12px; border-radius: 8px; font-family: var(--ui); font-size: .9rem; color: var(--tinta); cursor: pointer; }
+.menu-mais-lista button:hover { background: var(--papel); }
+.menu-mais-lista .perigo { color: var(--erro); }
+.item-seq .item-seq-uc { padding-right: 40px; }
+/* Esqueleto de carregamento */
+.esqueleto { list-style: none; height: 110px; border-radius: var(--raio-g); margin-bottom: var(--esp-p);
+  background: linear-gradient(90deg, var(--linha) 0%, var(--papel) 50%, var(--linha) 100%); background-size: 200% 100%; animation: brilho 1.2s linear infinite; opacity: .6; }
+@keyframes brilho { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .esqueleto { animation: none; } }
+/* Banco de questões */
+.lista-banco { list-style: none; margin: var(--esp-m) 0 0; padding: 0; display: grid; gap: var(--esp-p); }
+.lista-banco li:not(.esqueleto) { border: 1px solid var(--linha); border-radius: var(--raio); padding: 12px; }
+.lista-banco small { color: var(--tinta-3); font-size: .78rem; }
+.lista-banco p { margin: 6px 0 8px; }
+.lista-banco .esqueleto { height: 80px; }
+.vazio-banco { color: var(--tinta-2); }
+
+/* Primeiros passos (Início sem dados) */
+#cartoes.sem-grade { display: block; }
+.primeiros-passos { list-style: none; margin: 0 0 var(--esp-m); padding: 0; display: grid; gap: var(--esp-p); }
+.primeiros-passos li { display: flex; gap: var(--esp-m); align-items: flex-start; background: var(--folha); border: 1px solid var(--linha); border-radius: var(--raio-g); padding: var(--esp-m); }
+.primeiros-passos b { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--azul-claro); color: var(--azul); font-family: var(--ui); }
+.primeiros-passos strong { display: block; font-family: var(--ui); }
+.primeiros-passos span { display: block; color: var(--tinta-2); font-size: .9rem; margin-top: 2px; }

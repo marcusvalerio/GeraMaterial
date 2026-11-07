@@ -338,6 +338,98 @@ app.delete("/api/sequencias/:id", exigeLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Copiar uma sequência pronta para outra turma da mesma UC (mesmos materiais; troca só a turma).
+app.post("/api/sequencias/:id/copiar", exigeLogin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const orig = await obterSequencia(id, req.usuario);
+    if (!orig) return res.status(404).json({ erro: "Não encontrada" });
+    const turma = String(req.body.turma || "").trim().slice(0, 120);
+    const dados = { ...(orig.dados || {}), ...(turma ? { turma } : {}) };
+    const novo = await criarSequencia(dados, orig.referencias || [], req.usuario.id, null);
+    await sql`INSERT INTO entregas (sequencia_id, etapa, conteudo)
+      SELECT ${novo}, etapa, CASE WHEN ${turma} <> '' AND jsonb_typeof(conteudo) = 'object' AND conteudo ? 'turma'
+        THEN jsonb_set(conteudo, '{turma}', to_jsonb(${turma}::text)) ELSE conteudo END
+      FROM entregas WHERE sequencia_id = ${id}`;
+    // A entrada usada na geração vai junto, para os slides por encontro funcionarem na cópia.
+    await sql`INSERT INTO trabalhos (usuario_id, sequencia_id, etapa, entrada, estado)
+      SELECT ${req.usuario.id}, ${novo}, etapa, entrada, 'ok' FROM trabalhos
+      WHERE sequencia_id = ${id} AND entrada IS NOT NULL AND estado = 'ok' ORDER BY id DESC LIMIT 1`;
+    res.json({ id: novo });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+// Banco de questões: questões das avaliações já geradas (do próprio instrutor; gestores veem todas).
+app.get("/api/questoes", exigeLogin, async (req, res) => {
+  try {
+    const todos = ehGestor(req.usuario);
+    const q = `%${String(req.query.busca || "")}%`;
+    const linhas = await sql`SELECT s.id, s.uc, s.curso, e.conteudo FROM entregas e JOIN sequencias s ON s.id = e.sequencia_id
+      WHERE e.etapa = 'avaliacao' AND (${todos} OR s.usuario_id = ${req.usuario.id}) AND (s.uc ILIKE ${q} OR s.curso ILIKE ${q})
+      ORDER BY e.gerado_em DESC LIMIT 40`;
+    const itens = [];
+    for (const l of linhas) {
+      for (const [chave, rotulo] of [["avaliacao30", "Avaliação 30"], ["avaliacao60", "Avaliação 60"]]) {
+        for (const sec of l.conteudo?.[chave]?.secoes || []) {
+          for (const t of [...(sec.itens || []), ...(sec.paragrafos || [])]) {
+            const texto = String(t || "").trim();
+            if (texto.length > 25 && /\?|assinale|explique|descreva|justifique|calcule|analise|cite|compare|identifique/i.test(texto))
+              itens.push({ sequencia: l.id, uc: l.uc, curso: l.curso, origem: rotulo, secao: sec.titulo || "", texto });
+          }
+        }
+      }
+    }
+    res.json({ itens: itens.slice(0, 400) });
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+// Edição feita pelo professor na prévia: substitui o conteúdo do material.
+app.put("/api/sequencias/:id/entregas/:etapa", exigeLogin, async (req, res) => {
+  try {
+    const id = Number(req.params.id), etapa = req.params.etapa;
+    if (!(await podeEditarSequencia(id, req.usuario))) return res.status(404).json({ erro: "Não encontrada" });
+    if (!(ETAPAS[etapa] || /^slides:\d+$/.test(etapa))) return res.status(400).json({ erro: "Material inválido" });
+    if (!req.body || typeof req.body.conteudo !== "object") return res.status(400).json({ erro: "Conteúdo inválido" });
+    await salvarEntrega(id, etapa, req.body.conteudo);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+// Refazer só um encontro do Plano de Aula, mantendo os demais.
+app.post("/api/sequencias/:id/plano/encontro/:n", exigeLogin, async (req, res) => {
+  try {
+    const id = Number(req.params.id), n = Number(req.params.n);
+    if (!(await podeEditarSequencia(id, req.usuario))) return res.status(404).json({ erro: "Não encontrada" });
+    const [e] = await sql`SELECT conteudo FROM entregas WHERE sequencia_id = ${id} AND etapa = 'plano'`;
+    const plano = e?.conteudo;
+    const i = (plano?.dias || []).findIndex((d, k) => Number(d.numero || k + 1) === n);
+    if (i < 0) return res.status(404).json({ erro: "Encontro não encontrado" });
+    const [s] = await sql`SELECT dados FROM sequencias WHERE id = ${id}`;
+    const [ant] = await sql`SELECT entrada FROM trabalhos WHERE sequencia_id = ${id} AND entrada IS NOT NULL ORDER BY id DESC LIMIT 1`;
+    const dados = ant?.entrada?.dados || s?.dados || {};
+    const pedido = String(req.body.pedido || "").slice(0, 600);
+    const usuario = `${ant?.entrada?.referencia || ""}\n\n${contexto(dados)}\n\nPLANO DE AULA ATUAL: ${JSON.stringify(plano)}
+\nTAREFA: Reescreva SOMENTE o encontro ${n} do plano acima, melhorando objetivo, estratégia, atividade e avaliação,
+mantendo os mesmos conhecimentos oficiais, a mesma data e as mesmas horas.${pedido ? ` Pedido do professor: ${pedido}` : ""}
+Responda só o JSON do encontro, no mesmo formato dos itens de "dias".`;
+    const novo = await perguntarJson(SISTEMA, usuario);
+    const atual = plano.dias[i];
+    plano.dias[i] = { ...atual, ...novo, numero: atual.numero, data: atual.data, horas: atual.horas };
+    await salvarEntrega(id, "plano", plano);
+    res.json({ plano });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: err.message });
+  }
+});
+
 rotasAuth(app);
 rotasTurmas(app);
 

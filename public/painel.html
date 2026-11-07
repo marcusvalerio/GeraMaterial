@@ -88,10 +88,10 @@ async function carregar() {
     : `<p class="dica-aba">Nenhuma turma criada ainda.</p>`;
 
   $("#instrutores").innerHTML = `<table class="tabela tabela-cartoes"><thead><tr><th>Nome</th><th>Papel</th><th class="num">Turmas</th>
-    <th class="num">Sequências geradas</th><th class="num">Aulas sem registro</th><th class="num">Último material</th></tr></thead>
+    <th class="num">Sequências</th><th class="num">Completas</th><th class="num">Aulas sem registro</th><th class="num">Último material</th></tr></thead>
     <tbody>${instrutores.map((i) => `<tr><td class="titulo-linha"><strong>${esc(i.nome)}</strong><small>${esc(i.email)}</small></td>
       ${td("Papel", PAPEIS[i.papel])}
-      ${td("Turmas", i.turmas, "num")}${td("Sequências geradas", i.sequencias, "num")}
+      ${td("Turmas", i.turmas, "num")}${td("Sequências", i.sequencias, "num")}${td("Completas", i.sequencias ? `${i.completas} de ${i.sequencias}` : "-", `num ${i.sequencias - i.completas > 0 ? "alerta" : ""}`)}
       ${td("Aulas sem registro", i.atrasadas, `num ${i.atrasadas > 2 ? "alerta" : ""}`)}
       ${td("Último material", i.ultimo_material ? new Date(i.ultimo_material).toLocaleDateString("pt-BR") : "-", "num")}</tr>`).join("")}</tbody></table>`;
 }

@@ -82,7 +82,7 @@ function render() {
       ver.type = "button";
       ver.textContent = "Ver prévia";
       ver.className = "ver";
-      ver.onclick = () => abrirPrevia(et, it.resultados[et.id]);
+      ver.onclick = () => abrirPrevia(et, it.resultados[et.id], et.id);
       acoes.append(ver);
       for (const [rotulo, fmt, dados, nome, alt] of et.downloads(it.resultados[et.id], it)) {
         const b = document.createElement("button");
@@ -781,7 +781,7 @@ function renderSlides(it) {
     b.onclick = () => { const n = b.dataset.slBaixar; baixar("pptx", it.resultados[`slides:${n}`], `Slides Encontro ${n}${it.uc ? ` - ${nomeArquivo(it.uc.nome)}` : ""}`); };
   });
   caixa.querySelectorAll("[data-sl-ver]").forEach((b) => {
-    b.onclick = () => abrirPrevia({ id: "slides", nome: `Slides do Encontro ${b.dataset.slVer}` }, it.resultados[`slides:${b.dataset.slVer}`]);
+    b.onclick = () => abrirPrevia({ id: "slides", nome: `Slides do Encontro ${b.dataset.slVer}` }, it.resultados[`slides:${b.dataset.slVer}`], `slides:${b.dataset.slVer}`);
   });
 }
 
@@ -842,13 +842,16 @@ function htmlGenerico(o) {
 function htmlPlano(r) {
   return `<h3>${esc(r.titulo || "Plano de Aula")}</h3><p><strong>${esc(r.uc)}</strong> · ${esc(r.cargaHoraria)} · ${esc(r.organizacao)}</p>
     ${r.objetivoGeral ? `<h4>Objetivo geral</h4><p>${esc(r.objetivoGeral)}</p>` : ""}
-    ${(r.dias || []).map((d, i) => `<h4>Encontro ${d.numero || i + 1} – ${esc(d.titulo)} ${d.data ? `· ${esc(d.data)}` : ""}</h4>
+    ${(r.dias || []).map((d, i) => `<h4 class="enc-titulo">Encontro ${d.numero || i + 1} – ${esc(d.titulo)} ${d.data ? `· ${esc(d.data)}` : ""}
+        <button type="button" class="mini" data-refazer-enc="${d.numero || i + 1}">Refazer este encontro</button></h4>
       <ul>${(d.conhecimentos || []).map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
       <p><strong>Objetivo:</strong> ${esc(d.objetivo)}</p><p><strong>Estratégia MSEP:</strong> ${esc(d.estrategia)}</p>
       <p><strong>Atividade:</strong> ${esc(d.atividade)}</p><p><strong>Avaliação:</strong> ${esc(d.avaliacao)}</p>`).join("")}`;
 }
 
-function abrirPrevia(et, r) {
+let previaAtual = null;
+function abrirPrevia(et, r, chave = et.id) {
+  previaAtual = { et, chave };
   let html;
   if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60) + htmlDoc(r.gabarito);
   else if (et.id === "atividade") html = r.teorica ? htmlDoc(r.teorica) + htmlDoc(r.pratica) : htmlGenerico({ ...r, roteiro: undefined }) + htmlDoc(r.roteiro);
@@ -859,8 +862,94 @@ function abrirPrevia(et, r) {
   else html = htmlGenerico(r);
   $("#previaTitulo").textContent = et.nome;
   $("#previaCorpo").innerHTML = html || "<p>Sem conteúdo para mostrar.</p>";
-  $("#previa").showModal();
+  const editar = $("#editarPrevia");
+  editar.hidden = !item().sequenciaId;
+  editar.textContent = "Editar texto";
+  editar.onclick = () => abrirEditor(et, r, chave);
+  $("#previaCorpo").querySelectorAll("[data-refazer-enc]").forEach((b) => { b.onclick = () => refazerEncontro(Number(b.dataset.refazerEnc), b); });
+  if (!$("#previa").open) $("#previa").showModal();
   $("#previaCorpo").scrollTop = 0;
+}
+
+// Editor da prévia: cada texto do material vira um campo. Salvar grava no servidor e os downloads já saem com a edição.
+const ROTULOS_EDITOR = { titulo: "Título", texto: "Texto", paragrafos: "Parágrafo", itens: "Item", objetivo: "Objetivo", estrategia: "Estratégia",
+  atividade: "Atividade", avaliacao: "Avaliação", notas: "Notas do professor", conhecimentos: "Conhecimento", subtitulo: "Subtítulo" };
+function folhasTexto(obj, caminho = [], out = []) {
+  if (typeof obj === "string") { if (!["conferencia", "layout", "icone"].includes(caminho.at(-1))) out.push({ caminho, valor: obj }); }
+  else if (Array.isArray(obj)) obj.forEach((v, i) => folhasTexto(v, [...caminho, i], out));
+  else if (obj && typeof obj === "object") for (const [k, v] of Object.entries(obj)) if (k !== "conferencia") folhasTexto(v, [...caminho, k], out);
+  return out;
+}
+function rotuloCaminho(c) {
+  const partes = [];
+  for (let i = 0; i < c.length; i++) {
+    const k = c[i];
+    if (k === "dias") { partes.push(`Encontro ${Number(c[i + 1]) + 1}`); i++; }
+    else if (k === "slides") { partes.push(`Slide ${Number(c[i + 1]) + 1}`); i++; }
+    else if (k === "secoes") { partes.push(`Seção ${Number(c[i + 1]) + 1}`); i++; }
+    else if (typeof k === "number") partes.push(String(k + 1));
+    else partes.push(ROTULOS_EDITOR[k] || k);
+  }
+  return partes.join(" · ");
+}
+function abrirEditor(et, r, chave) {
+  const campos = folhasTexto(r);
+  $("#previaCorpo").innerHTML = `<p class="passo-ajuda">Ajuste o texto e toque em Salvar. Os arquivos baixados depois já saem com as suas mudanças.</p>
+    <div class="editor-campos">${campos.map((c, i) => `<label>${esc(rotuloCaminho(c.caminho))}
+      <textarea data-campo="${i}" rows="${Math.min(8, Math.max(1, Math.ceil(c.valor.length / 60)))}">${esc(c.valor)}</textarea></label>`).join("")}</div>
+    <div class="editor-acoes"><button type="button" class="alt" id="cancelarEdicao">Cancelar</button><button type="button" id="salvarEdicao">Salvar</button></div>`;
+  $("#editarPrevia").hidden = true;
+  $("#cancelarEdicao").onclick = () => abrirPrevia(et, r, chave);
+  $("#salvarEdicao").onclick = async (ev) => {
+    const novo = structuredClone(r);
+    $("#previaCorpo").querySelectorAll("[data-campo]").forEach((t) => {
+      const { caminho } = campos[Number(t.dataset.campo)];
+      let alvo = novo;
+      for (const k of caminho.slice(0, -1)) alvo = alvo[k];
+      alvo[caminho.at(-1)] = t.value;
+    });
+    ev.currentTarget.disabled = true;
+    ev.currentTarget.textContent = "Salvando…";
+    try {
+      const it = item();
+      const resp = await fetch(`/api/sequencias/${it.sequenciaId}/entregas/${encodeURIComponent(chave)}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ conteudo: novo }) });
+      if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).erro || "Não foi possível salvar.");
+      it.resultados[chave] = novo;
+      render();
+      avisar("Alterações salvas.");
+      abrirPrevia(et, novo, chave);
+    } catch (e) {
+      avisar(e.message, true);
+      ev.currentTarget.disabled = false;
+      ev.currentTarget.textContent = "Salvar";
+    }
+  };
+  $("#previaCorpo").scrollTop = 0;
+}
+
+// Refazer só um encontro do plano (opcionalmente com um pedido do professor).
+async function refazerEncontro(n, botao) {
+  const it = item();
+  if (!it.sequenciaId) return;
+  const pedido = prompt(`Refazer o Encontro ${n}. Quer pedir algo específico? (opcional)`, "");
+  if (pedido === null) return;
+  botao.disabled = true;
+  botao.textContent = "Refazendo…";
+  try {
+    const r = await fetch(`/api/sequencias/${it.sequenciaId}/plano/encontro/${n}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pedido }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erro || "Não foi possível refazer o encontro.");
+    it.resultados.plano = j.plano;
+    render();
+    abrirPrevia(ETAPAS.find((e) => e.id === "plano"), j.plano, "plano");
+    avisar(`Encontro ${n} refeito.`);
+  } catch (e) {
+    avisar(e.message, true);
+    botao.disabled = false;
+    botao.textContent = "Refazer este encontro";
+  }
 }
 
 async function abrir(id) {

@@ -244,6 +244,8 @@ ${entregas.map((e) => `MATERIAL JÁ GERADO (${e.etapa}):\n${JSON.stringify(e.con
       sql`SELECT u.id, u.nome, u.email, u.papel,
             (SELECT count(*)::int FROM turmas t WHERE t.usuario_id = u.id) AS turmas,
             (SELECT count(*)::int FROM sequencias s WHERE s.usuario_id = u.id) AS sequencias,
+            (SELECT count(*)::int FROM sequencias s WHERE s.usuario_id = u.id
+               AND (SELECT count(DISTINCT e.etapa) FROM entregas e WHERE e.sequencia_id = s.id AND e.etapa IN ('per','plano','avaliacao','atividade')) = 4) AS completas,
             (SELECT count(*)::int FROM aulas a JOIN turmas t ON t.id = a.turma_id WHERE t.usuario_id = u.id AND a.data <= (now() AT TIME ZONE 'America/Sao_Paulo')::date AND NOT a.realizada) AS atrasadas,
             (SELECT max(s.criado_em) FROM sequencias s WHERE s.usuario_id = u.id) AS ultimo_material
           FROM usuarios u WHERE u.aprovado ORDER BY u.nome`,

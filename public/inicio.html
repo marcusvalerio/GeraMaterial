@@ -67,6 +67,15 @@ if (usuario) {
       pendentes[0] ? `turmas.html?id=${pendentes[0].id}` : "turmas.html", pend > 0),
     cartao("materiais", "Materiais", totais.materiais, `em ${totais.turmas} ${totais.turmas === 1 ? "turma" : "turmas"}`, "materiais.html"),
   ].join("");
+  // Primeiro uso: passo a passo em 3 etapas no lugar dos cartões vazios.
+  if (!totais.turmas && !totais.materiais) {
+    $("#cartoes").innerHTML = `<ol class="primeiros-passos">
+      <li><b>1</b><div><strong>Envie o plano de curso</strong><span>PDF ou Word. O sistema encontra as UCs, os tópicos e as horas.</span></div></li>
+      <li><b>2</b><div><strong>Monte o calendário da turma</strong><span>Dias de aula e início. As datas dos encontros saem certas.</span></div></li>
+      <li><b>3</b><div><strong>Baixe os materiais</strong><span>PER, Plano de Aula, Avaliações com gabarito e Atividade, além dos slides de cada encontro.</span></div></li>
+    </ol><a class="btn-gerar" href="index.html">Começar agora</a>`;
+    $("#cartoes").classList.add("sem-grade");
+  }
 
   const dia = (iso) => { const d = new Date(`${iso}T12:00:00`); return `<span class="dia"><strong>${dataCurta(iso)}</strong><small>${DIAS[d.getDay()]}</small></span>`; };
   $("#proximas").innerHTML = proximas.length ? proximas.slice(0, 5).map((a) => `<li><a href="turmas.html?id=${a.turma_id}">${dia(a.data)}
