@@ -8,10 +8,14 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto, promptSlides } from "./prompts.js";
 // Geradores de arquivo e leitores de PDF/Word só carregam quando usados: o servidor liga mais rápido.
-const sob = (mod, nome) => async (...a) => (await import(mod))[nome](...a);
-const gerarSlides = sob("./slides.js", "gerarSlides"), gerarDocx = sob("./exportar.js", "gerarDocx"), gerarPdf = sob("./exportar.js", "gerarPdf");
-const gerarPlanoAula = sob("./planoAula.js", "gerarPlanoAula"), gerarCronograma = sob("./cronograma.js", "gerarCronograma");
-const gerarPER = sob("./planilhas.js", "gerarPER"), gerarEP190 = sob("./planilhas.js", "gerarEP190");
+// (import com caminho literal: a Vercel só empacota módulos que ela consegue enxergar no código)
+const gerarSlides = async (d) => (await import("./slides.js")).gerarSlides(d);
+const gerarDocx = async (d) => (await import("./exportar.js")).gerarDocx(d);
+const gerarPdf = async (d) => (await import("./exportar.js")).gerarPdf(d);
+const gerarPlanoAula = async (d) => (await import("./planoAula.js")).gerarPlanoAula(d);
+const gerarCronograma = async (d) => (await import("./cronograma.js")).gerarCronograma(d);
+const gerarPER = async (d) => (await import("./planilhas.js")).gerarPER(d);
+const gerarEP190 = async (d) => (await import("./planilhas.js")).gerarEP190(d);
 import { criarSequencia, salvarEntrega, mapaEntregas, listarSequencias, obterSequencia, excluirSequencia, podeEditarSequencia, bancoAtivo } from "./db.js";
 import { carregarUsuario, exigeLogin, rotasAuth, ehGestor } from "./auth.js";
 import { sql } from "./db.js";

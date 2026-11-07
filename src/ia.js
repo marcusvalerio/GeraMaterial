@@ -119,11 +119,21 @@ export async function perguntar(system, usuario, opcoes = {}) {
 export async function perguntarJson(system, usuario, tentativas = 3, opcoes = {}) {
   let ultimo;
   for (let i = 0; i < tentativas; i++) {
-    const texto = await perguntar(system, usuario, opcoes);
+    const pedido = i ? `${usuario}\n\nATENÇÃO: a resposta anterior veio com JSON inválido. Responda SOMENTE um JSON válido:
+aspas duplas dentro de textos escapadas (\\"), vírgula entre os itens das listas e nada fora do JSON.` : usuario;
+    const texto = await perguntar(system, pedido, opcoes);
     const ini = texto.indexOf("{"), fim = texto.lastIndexOf("}");
     try {
       if (ini < 0 || fim < 0) throw new SyntaxError("sem JSON");
-      return JSON.parse(texto.slice(ini, fim + 1));
+      const bruto = texto.slice(ini, fim + 1);
+      try { return JSON.parse(bruto); }
+      catch (e) {
+        // Conserta os defeitos comuns (aspas sem escape, vírgula faltando) antes de pedir de novo.
+        const { jsonrepair } = await import("jsonrepair");
+        const r = JSON.parse(jsonrepair(bruto));
+        console.warn("JSON da IA consertado:", e.message);
+        return r;
+      }
     } catch (e) {
       ultimo = e;
       console.warn(`JSON inválido da IA (tentativa ${i + 1}):`, e.message);
