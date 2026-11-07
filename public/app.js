@@ -93,6 +93,17 @@ function render() {
         acoes.append(b);
       }
       corpo.append(acoes);
+      const cf = et.id === "plano" && it.resultados.plano?.conferencia;
+      if (cf && cf.total) {
+        const ok = !cf.faltando.length && cf.horasOk;
+        const box = document.createElement("div");
+        box.className = `conferencia ${ok ? "ok" : "alerta"}`;
+        box.innerHTML = ok
+          ? `<strong>✓ Conferido:</strong> ${cf.total} de ${cf.total} tópicos oficiais da UC${cf.horasUC ? ` · ${cf.horasPlano}h de ${cf.horasUC}h` : ""}`
+          : `<strong>Atenção na conferência:</strong> ${cf.cobertos} de ${cf.total} tópicos oficiais encontrados${cf.horasOk ? "" : ` · horas: ${cf.horasPlano}h no plano, ${cf.horasUC}h na UC`}
+             ${cf.faltando.length ? `<details><summary>Ver o que faltou (${cf.faltando.length})</summary><ul>${cf.faltando.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></details>` : ""}`;
+        corpo.append(box);
+      }
     }
     if (st.tipo === "erro" && !gerando) {
       const b = document.createElement("button");
@@ -119,6 +130,44 @@ function render() {
   $("#contagem").textContent = `${feitas} de ${ETAPAS.length}`;
   renderAbas();
   renderSlides(it);
+  renderPacote(it);
+}
+
+// "Baixar tudo": todos os arquivos prontos da sequência (e os slides gerados) num .zip.
+function renderPacote(it) {
+  let caixa = $("#pacote");
+  if (!caixa) {
+    caixa = Object.assign(document.createElement("div"), { id: "pacote", className: "pacote" });
+    $("#etapas").after(caixa);
+  }
+  const itens = itensDoPacote(it);
+  caixa.hidden = itens.length < 2;
+  if (caixa.hidden) return;
+  caixa.innerHTML = `<button type="button" class="btn-secundario">Baixar tudo (.zip) · ${itens.length} arquivos</button>`;
+  caixa.firstElementChild.onclick = async (ev) => {
+    const b = ev.currentTarget;
+    b.disabled = true; b.textContent = "Montando o pacote…";
+    try {
+      const nome = `Materiais${it.uc ? ` - ${nomeArquivo(it.uc.nome)}` : ""}`;
+      const r = await fetch(`/api/exportar-pacote?nome=${encodeURIComponent(nome)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itens }) });
+      if (!r.ok) throw new Error();
+      const url = URL.createObjectURL(await r.blob());
+      Object.assign(document.createElement("a"), { href: url, download: `${nome}.zip` }).click();
+      URL.revokeObjectURL(url);
+    } catch { avisar("Não foi possível montar o pacote. Tente de novo.", true); }
+    renderPacote(it);
+  };
+}
+function itensDoPacote(it) {
+  const itens = [];
+  for (const et of ETAPAS) {
+    const r = it.resultados[et.id];
+    if (!r) continue;
+    for (const [, formato, dados, nome] of et.downloads(r, it)) itens.push({ formato, dados, nome });
+  }
+  for (const [k, r] of Object.entries(it.resultados)) if (k.startsWith("slides:") && r?.slides) itens.push({ formato: "pptx", dados: r, nome: `Slides Encontro ${k.split(":")[1]}` });
+  return itens;
 }
 
 function renderAbas() {
@@ -609,8 +658,24 @@ async function acompanharSequencia(it) {
     } catch { continue; }
     aplicarProgresso(it, j);
     render();
-    if (!j.ativo) return !Object.values(j.estados).some((e) => e.tipo === "erro");
+    if (!j.ativo) {
+      const ok = !Object.values(j.estados).some((e) => e.tipo === "erro");
+      avisarPronto(ok ? "Seus materiais ficaram prontos." : "A geração parou com um erro. Toque para ver.");
+      return ok;
+    }
   }
+}
+
+// Aviso do sistema quando a geração termina com o app em segundo plano.
+function pedirPermissaoAviso() {
+  try { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); } catch { /* sem suporte */ }
+}
+function avisarPronto(texto) {
+  try {
+    if (!document.hidden || !("Notification" in window) || Notification.permission !== "granted") return;
+    const n = new Notification("gera.documento", { body: texto, icon: "icones/favicon-32.png", tag: "geracao" });
+    n.onclick = () => { window.focus(); n.close(); };
+  } catch { /* sem suporte */ }
 }
 
 function aplicarProgresso(it, j) {
@@ -627,6 +692,7 @@ function aplicarProgresso(it, j) {
 }
 
 async function gerarFila(inicioUc = 0, inicioEtapa = 0, continuar = false) {
+  pedirPermissaoAviso();
   const salva = continuar && fila[inicioUc]?.dados;
   if (gerando || (!salva && !validar())) return;
   if (salva) avisar("");

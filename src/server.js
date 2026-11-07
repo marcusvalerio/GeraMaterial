@@ -21,7 +21,7 @@ const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 const raiz = path.dirname(fileURLToPath(import.meta.url));
 
-app.use(express.json({ limit: "5mb" }));
+app.use(express.json({ limit: "20mb" }));
 app.use(carregarUsuario);
 // A raiz abre a Home (Início).
 app.get("/", (_req, res) => res.redirect("/inicio.html"));
@@ -88,7 +88,21 @@ async function executarEtapa(etapaId, dados, anteriores, referencia) {
     if (dados.dataTermino) resultado.dataTermino = dados.dataTermino;
     if (dados.cargaHorariaUC) resultado.cargaHorariaUC = dados.cargaHorariaUC;
   }
+  if (etapaId === "plano" && Array.isArray(resultado.dias)) resultado.conferencia = conferirPlano(resultado, dados);
   return resultado;
+}
+
+// Conferência automática do Plano de Aula: todos os conhecimentos oficiais apareceram? As horas fecham?
+const normal = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+function conferirPlano(plano, dados) {
+  const cs = Array.isArray(dados.conhecimentosUC) ? dados.conhecimentosUC : [];
+  const itens = cs.flatMap((c, i) => (c.subtopicos?.length ? c.subtopicos.map((s, j) => ({ n: `${i + 1}.${j + 1}`, nome: s })) : [{ n: `${i + 1}`, nome: c.topico }]));
+  const texto = normal(plano.dias.map((d) => (d.conhecimentos || []).join(" ")).join(" "));
+  const faltando = itens.filter((it) => !texto.includes(normal(it.nome))).map((it) => `${it.n} ${it.nome}`);
+  const horasPlano = plano.dias.reduce((s, d) => s + horasDe(d.horas), 0);
+  const horasUC = horasDe(dados.cargaHorariaUC);
+  return { total: itens.length, cobertos: itens.length - faltando.length, faltando, horasPlano, horasUC,
+    horasOk: !horasUC || Math.abs(horasPlano - horasUC) < 0.5 };
 }
 
 // Slides de um encontro do Plano de Aula: conteúdo preso aos conhecimentos daquele encontro,
@@ -270,6 +284,30 @@ const EXPORTADORES = {
   pptx: [gerarSlides, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
   pdf: [gerarPdf, "application/pdf", "pdf"],
 };
+
+// Pacote: vários arquivos da sequência num único .zip.
+app.post("/api/exportar-pacote", exigeLogin, async (req, res) => {
+  try {
+    const { default: JSZip } = await import("jszip");
+    const zip = new JSZip();
+    const usados = new Set();
+    for (const { formato, dados, nome } of (req.body.itens || []).slice(0, 60)) {
+      const exp = EXPORTADORES[formato];
+      if (!exp || !dados) continue;
+      let base = String(nome || "material").replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 80).trim() || "material";
+      while (usados.has(base)) base += " (2)";
+      usados.add(base);
+      zip.file(`${base}.${exp[2]}`, Buffer.from(await exp[0](dados)));
+    }
+    const nome = String(req.query.nome || "materiais").replace(/[^\p{L}\p{N} _-]/gu, "").slice(0, 80).trim() || "materiais";
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(nome)}.zip`);
+    res.send(await zip.generateAsync({ type: "nodebuffer" }));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ erro: e.message });
+  }
+});
 
 app.post("/api/exportar/:formato", exigeLogin, async (req, res) => {
   const exp = EXPORTADORES[req.params.formato];

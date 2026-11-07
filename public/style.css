@@ -782,3 +782,13 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 /* Títulos em DM Sans: peso 600 e espaçamento um pouco mais justo (substitui a serifada). */
 h1, h2, h3, .home-card .home-valor, .indicadores strong { letter-spacing: -.025em; }
 .home-card .home-valor.vazio { letter-spacing: 0; }
+
+/* Conferência automática do plano */
+.conferencia { margin-top: var(--esp-p); padding: 10px 12px; border-radius: var(--raio); font-size: .86rem; line-height: 1.45; }
+.conferencia.ok { background: var(--verde-claro); color: var(--verde); }
+.conferencia.alerta { background: var(--erro-claro); color: var(--erro); }
+.conferencia ul { margin: 6px 0 0; padding-left: 18px; }
+.conferencia summary { cursor: pointer; font-weight: 600; margin-top: 4px; }
+
+.pacote { margin-top: var(--esp-m); }
+.pacote button { width: 100%; }
