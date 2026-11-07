@@ -118,6 +118,7 @@ function render() {
   $("#barra").style.width = `${(feitas / ETAPAS.length) * 100}%`;
   $("#contagem").textContent = `${feitas} de ${ETAPAS.length}`;
   renderAbas();
+  renderSlides(it);
 }
 
 function renderAbas() {
@@ -614,6 +615,7 @@ async function acompanharSequencia(it) {
 
 function aplicarProgresso(it, j) {
   Object.assign(it.resultados, j.resultados);
+  it.slidesEstados = j.estados;
   for (const e of ETAPAS) {
     const st = j.estados[e.id];
     if (st?.tipo === "gerando") it.estados[e.id] = { tipo: "gerando", msg: MSG_GERANDO };
@@ -686,6 +688,56 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0, continuar = false) {
   }
 }
 
+// ---------- Slides por encontro (sob demanda) ----------
+function renderSlides(it) {
+  const caixa = $("#slidesEnc");
+  const dias = it.resultados.plano?.dias || [];
+  caixa.hidden = !dias.length || !it.sequenciaId;
+  if (caixa.hidden) return;
+  const est = it.slidesEstados || {};
+  caixa.innerHTML = `<h3>Slides por encontro</h3>
+    <p class="passo-ajuda">Gere os slides de cada aula quando precisar. A quantidade acompanha as horas do encontro e cada slide traz notas para o professor.</p>
+    <ol class="lista-slides">${dias.map((d, i) => {
+      const n = Number(d.numero || i + 1), k = `slides:${n}`, r = it.resultados[k], st = est[k];
+      const estado = st?.tipo === "gerando" ? '<span class="sl-estado gerando">Gerando… pode sair do app</span>'
+        : st?.tipo === "erro" ? `<span class="sl-estado erro">${esc(st.msg)}</span>`
+        : r ? `<span class="sl-estado ok">${(r.slides || []).length} slides prontos</span>` : "";
+      const botoes = st?.tipo === "gerando" ? ""
+        : r ? `<button type="button" class="ver" data-sl-ver="${n}">Ver prévia</button>
+               <button type="button" data-sl-baixar="${n}">Baixar · PowerPoint</button>
+               <button type="button" class="alt" data-sl-gerar="${n}">Gerar de novo</button>`
+        : `<button type="button" data-sl-gerar="${n}">${st?.tipo === "erro" ? "Tentar de novo" : "Gerar slides"}</button>`;
+      return `<li><div><strong>Encontro ${n} – ${esc(d.titulo || "")}</strong><small>${esc([d.data, d.horas].filter(Boolean).join(" · "))}</small>${estado}</div>
+        <div class="acoes">${botoes}</div></li>`;
+    }).join("")}</ol>`;
+  caixa.querySelectorAll("[data-sl-gerar]").forEach((b) => { b.onclick = () => gerarSlidesEncontro(it, Number(b.dataset.slGerar)); });
+  caixa.querySelectorAll("[data-sl-baixar]").forEach((b) => {
+    b.onclick = () => { const n = b.dataset.slBaixar; baixar("pptx", it.resultados[`slides:${n}`], `Slides Encontro ${n}${it.uc ? ` - ${nomeArquivo(it.uc.nome)}` : ""}`); };
+  });
+  caixa.querySelectorAll("[data-sl-ver]").forEach((b) => {
+    b.onclick = () => abrirPrevia({ id: "slides", nome: `Slides do Encontro ${b.dataset.slVer}` }, it.resultados[`slides:${b.dataset.slVer}`]);
+  });
+}
+
+let acompanhandoSlides = false;
+async function gerarSlidesEncontro(it, n) {
+  try {
+    const r = await fetch(`/api/sequencias/${it.sequenciaId}/slides/${n}`, { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erro || "Não foi possível gerar os slides.");
+    it.slidesEstados = { ...(it.slidesEstados || {}), [`slides:${n}`]: { tipo: "gerando" } };
+    delete it.resultados[`slides:${n}`];
+    render();
+    if (acompanhandoSlides || gerando) return;
+    acompanhandoSlides = true;
+    await acompanharSequencia(it);
+  } catch (e) {
+    avisar(e.message, true);
+  }
+  acompanhandoSlides = false;
+  render();
+}
+
 // ---------- Prévia ----------
 const ROTULOS = { uc: "Unidade curricular", cargaHorariaUC: "Carga horária", dataInicio: "Início", dataTermino: "Término", ch: "Horas", data: "Data" };
 const rotulo = (k) => ROTULOS[k] || k.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
@@ -735,6 +787,9 @@ function abrirPrevia(et, r) {
   if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60) + htmlDoc(r.gabarito);
   else if (et.id === "atividade") html = r.teorica ? htmlDoc(r.teorica) + htmlDoc(r.pratica) : htmlGenerico({ ...r, roteiro: undefined }) + htmlDoc(r.roteiro);
   else if (et.id === "plano" && r.dias) html = htmlPlano(r);
+  else if (et.id === "slides") html = (r.slides || []).map((sl, i) => `<div class="previa-slide"><small>${i + 1}${sl.olho ? ` · ${esc(sl.olho)}` : ""}</small>
+      <strong>${esc(sl.titulo || "")}</strong>${textosDe({ ...sl, notas: undefined }).slice(0, 8).map((t) => `<p>${esc(t)}</p>`).join("")}
+      ${sl.notas ? `<p class="previa-notas"><strong>Notas do professor:</strong> ${esc(Array.isArray(sl.notas) ? sl.notas.join(" ") : sl.notas)}</p>` : ""}</div>`).join("");
   else html = htmlGenerico(r);
   $("#previaTitulo").textContent = et.nome;
   $("#previaCorpo").innerHTML = html || "<p>Sem conteúdo para mostrar.</p>";

@@ -1,3 +1,4 @@
+import { ICONES } from "./slides.js";
 // Sequência de entregas: 1º PER (planilha), 2º Plano de Aula (Word, encontro por encontro),
 // 3º Avaliações de 30 e 60 pontos + gabarito do professor, 4º Atividade do educador (EP-190 + roteiro).
 // Base: MSEP + documento de referência enviado pelo instrutor.
@@ -96,6 +97,58 @@ JSON:
   "roteiro": ${DOC_GENERICO} }`,
   },
 };
+
+// Slides de UM encontro do Plano de Aula, sob demanda. Quantidade proporcional às horas da aula.
+export function promptSlides(encontro, horas) {
+  const n = Math.max(12, Math.min(40, Math.round(7 * horas)));
+  return `Crie os SLIDES do encontro abaixo, para o professor conduzir ${horas} horas de aula com eles.
+ENCONTRO: ${JSON.stringify(encontro)}
+Regras de conteúdo (obrigatórias):
+- Entre ${n - 3} e ${n + 3} slides. Uma aula de ${horas} horas precisa de material para ${horas} horas: nada de apresentação curta.
+- O conteúdo é EXATAMENTE os conhecimentos deste encontro (lista oficial do plano de curso, mesma numeração e palavras).
+  Cada conhecimento ganha VÁRIOS slides: definição/conceito, como funciona na prática, exemplos reais do setor,
+  comparação ou tabela quando couber, erros comuns, e um caso ou pergunta para a turma. Nada fora da lista oficial.
+- Ordem: capa, abertura (o encontro, horas e tópicos), objetivos (os do encontro), blocos de conteúdo (um bloco por
+  conhecimento, com "olho" "BLOCO N · NOME"), a atividade do encontro (layout "atividade", fiel à atividade do plano),
+  questões de fixação, síntese e referências (bibliografia do plano de curso).
+- Textos dos slides: frases completas e informativas (não só palavras soltas), mas cabendo no slide.
+- Em TODO slide, o campo "notas" (anotações do professor): 3 a 6 frases com o que explicar, um exemplo para contar,
+  uma pergunta para a turma e o tempo sugerido (ex.: "Tempo: 10 min"). A soma dos tempos fecha as ${horas} horas.
+PROIBIDO usar emojis. Use exatamente os nomes de campos em português indicados abaixo.
+FORMATO GERAL (todo slide leva "notas"):
+{ "titulo": "", "rodape": "Curso | Unidade Curricular", "professor": "",
+  "slides": [ { "layout": "capa", ..., "notas": "O que falar... Exemplo: ... Pergunta para a turma: ... Tempo: 5 min" } ] }
+CONFIRA ANTES DE RESPONDER: o array "slides" tem pelo menos ${n - 3} itens e TODOS têm "notas" preenchido.
+Ícones: use SOMENTE nomes desta lista no campo "icone": ${ICONES.join(", ")}.
+Cada slide tem "olho" (rótulo curto acima do título, ex.: "BLOCO 1 · FUNDAMENTOS") e textos curtos. JSON:
+{ "titulo": "", "rodape": "Curso | Unidade Curricular", "professor": "Professor(a) Nome", "slides": [ ... ] }
+Layouts disponíveis ("layout") e seus campos:
+- "capa" (1º slide): { olho: "SENAI · CURSO", contexto: "UC", modulo: "MÓDULO X", titulo, professor, subtitulo: "Carga horária...",
+   lateral: [ { rotulo: "AULA 01", texto: "temas" } ] }
+- "abertura" (início de cada aula/encontro): { olho: "Aula", numero: "01", titulo, subtitulo: "4 horas · teoria e prática", itens: ["tópicos da aula"] }
+- "objetivos": { olho, titulo: "Ao final desta aula, você será capaz de:", itens: [4 a 6 objetivos] }
+- "conceito": { olho, titulo, texto: "definição", cards: [ { icone, titulo, texto } ] (3 a 6), exemplo: { rotulo: "NA ROTINA", titulo, texto }, nota }
+- "cards": { olho, titulo, cards: [ { icone, titulo, texto, citacao } ] (2 a 4), destaque: índice do card em destaque (opcional), nota }
+- "jornada": { olho, titulo, passos: [ { icone, rotulo, titulo, texto } ] (3 a 5), nota }
+- "fluxo": { olho, titulo, passos: [ { titulo } ] (4 a 6), destaque: índice, esquerda: { rotulo: "EXEMPLO", titulo, texto }, direita: { rotulo: "ATENÇÃO", titulo, texto } }
+- "comparacao": { olho, titulo, esquerda: { rotulo, icone, titulo, itens, exemplo }, direita: { rotulo, icone, titulo, itens, exemplo } }
+- "lista": { olho, titulo, itens: [ { icone, titulo, texto } ] (3 a 5), nota }
+- "escala": { olho, titulo, texto, pontos: [ { rotulo, valor } ] (3: ideal, realista, limite; valor = número ou até 3 palavras), cards: [ { titulo, texto } ] (2), nota }
+- "tabela": { olho, titulo, cabecalho: [...], linhas: [[...]] (até 8), alertas: ["erros comuns"] (opcional), nota }
+- "caso": { olho, titulo, rotulo: "SITUAÇÃO", situacao: "texto do caso", tempo: "20 min", perguntas: [3 a 5] }
+- "atividade": { olho, titulo, tempo, instrucoes: [...], entrega }
+- "questoes": { olho, titulo, itens: [perguntas de fixação], nota }
+- "ishikawa" (DESENHO do diagrama espinha de peixe — use sempre que a aula falar de Ishikawa/causa e efeito):
+   { olho, titulo, efeito: "problema", categorias: [ { nome: "Máquina", causas: [até 3 causas curtas] } ] (6 categorias: 6M), nota }
+- "ciclo" (DESENHO de ciclo — PDCA, ciclo de vida, melhoria contínua): { olho, titulo, centro: "PDCA", etapas: [ { sigla: "P", titulo, texto } ] (3 a 6) }
+- "grafico" (GRÁFICO real — Pareto, comparação de valores, indicadores): { olho, titulo, tipo: "pareto" | "colunas" | "horizontal",
+   serie: "nome da série", categorias: [...], valores: [números], texto: "leitura/interpretação do gráfico", nota }
+REGRA: sempre que o conteúdo tiver uma ferramenta ou conceito visual (Ishikawa, PDCA, Pareto, histograma, fluxograma, gráfico),
+MOSTRE o desenho com o layout correspondente (ishikawa, ciclo, grafico, fluxo), além de explicá-lo.
+- "referencias" (SEMPRE o último slide): { titulo: "Fontes e bibliografia", itens: ["SOBRENOME, Nome. Título. Editora, ano."] }
+   As fontes/bibliografia vão SOMENTE neste slide final — nunca no campo "nota" dos outros slides.
+- "sintese" (penúltimo): { olho: "SÍNTESE", titulo: "O que levamos desta aula", frase: "frase de impacto", itens: [4 a 6] }`;
+}
 
 export const ORDEM = ["per", "plano", "avaliacao", "atividade"];
 

@@ -8,7 +8,8 @@ import { extractText } from "unpdf";
 import { perguntarJson, provedorAtivo } from "./ia.js";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto } from "./prompts.js";
+import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto, promptSlides } from "./prompts.js";
+import { gerarSlides } from "./slides.js";
 import { gerarDocx, gerarPdf } from "./exportar.js";
 import { gerarPlanoAula } from "./planoAula.js";
 import { gerarCronograma } from "./cronograma.js";
@@ -92,6 +93,23 @@ async function executarEtapa(etapaId, dados, anteriores, referencia) {
   return resultado;
 }
 
+// Slides de um encontro do Plano de Aula: conteúdo preso aos conhecimentos daquele encontro,
+// quantidade proporcional às horas e notas do professor em cada slide.
+const horasDe = (v) => Number(String(v ?? "").replace(",", ".").match(/[\d.]+/)?.[0] || 0);
+async function executarSlides(numero, dados, prontos, referencia) {
+  const plano = prontos.plano;
+  const enc = (plano?.dias || []).find((d, i) => Number(d.numero || i + 1) === numero);
+  if (!enc) throw new Error("Encontro não encontrado no Plano de Aula. Gere o Plano de Aula primeiro.");
+  const horas = horasDe(enc.horas) || horasDe(dados.horasAula) || 4;
+  const resumo = { uc: plano.uc, curso: plano.curso, objetivoGeral: plano.objetivoGeral, totalEncontros: plano.dias.length };
+  const usuario = `${referencia}\n\n${contexto(dados)}\n\nPLANO DE AULA (resumo): ${JSON.stringify(resumo)}\n\nTAREFA: ${promptSlides(enc, horas)}`;
+  const r = await perguntarJson(SISTEMA, usuario);
+  r.rodape = r.rodape || `${dados.curso || plano.curso || ""} | ${dados.uc || plano.uc || ""}`;
+  r.professor = r.professor || dados.instrutor || "";
+  r.encontro = numero;
+  return r;
+}
+
 // ---------- Geração em cadeia, no servidor ----------
 // O app pede a primeira etapa e a lista das seguintes ("seguir"). O servidor guarda o pedido e, ao terminar
 // cada etapa, dispara sozinho a próxima numa chamada nova (cada uma com o seu limite de 5 min da Vercel).
@@ -105,7 +123,9 @@ async function rodarTrabalho(id) {
   try {
     const entregas = await sql`SELECT etapa, conteudo FROM entregas WHERE sequencia_id = ${t.sequencia_id}`;
     const anteriores = Object.fromEntries(entregas.filter((e) => ORDEM.indexOf(e.etapa) < ORDEM.indexOf(t.etapa)).map((e) => [e.etapa, e.conteudo]));
-    const resultado = await executarEtapa(t.etapa, dados || {}, anteriores, referencia || "");
+    const resultado = t.etapa.startsWith("slides:")
+      ? await executarSlides(Number(t.etapa.split(":")[1]), dados || {}, Object.fromEntries(entregas.map((e) => [e.etapa, e.conteudo])), referencia || "")
+      : await executarEtapa(t.etapa, dados || {}, anteriores, referencia || "");
     await salvarEntrega(t.sequencia_id, t.etapa, resultado);
     await sql`UPDATE trabalhos SET estado = 'ok', atualizado_em = now() WHERE id = ${id}`;
   } catch (e) {
@@ -174,22 +194,44 @@ app.post("/api/gerar/:etapa", exigeLogin, upload.array("referencias"), async (re
   }
 });
 
+app.post("/api/sequencias/:id/slides/:n", exigeLogin, async (req, res) => {
+  try {
+    const id = Number(req.params.id), n = Number(req.params.n);
+    if (!(await podeEditarSequencia(id, req.usuario))) return res.status(404).json({ erro: "Não encontrada" });
+    const [s] = await sql`SELECT dados FROM sequencias WHERE id = ${id}`;
+    const [plano] = await sql`SELECT 1 FROM entregas WHERE sequencia_id = ${id} AND etapa = 'plano'`;
+    if (!plano) return res.status(400).json({ erro: "Gere o Plano de Aula antes dos slides." });
+    // O plano de curso lido fica guardado no pedido da sequência.
+    const [ant] = await sql`SELECT entrada FROM trabalhos WHERE sequencia_id = ${id} AND entrada IS NOT NULL ORDER BY id DESC LIMIT 1`;
+    const base = `${req.headers["x-forwarded-proto"] || req.protocol}://${req.headers.host}`;
+    const entrada = { dados: ant?.entrada?.dados || s?.dados || {}, referencia: ant?.entrada?.referencia || "", base };
+    const etapa = `slides:${n}`;
+    await sql`UPDATE trabalhos SET estado = 'cancelado' WHERE sequencia_id = ${id} AND etapa = ${etapa} AND estado = 'gerando'`;
+    const [t] = await sql`INSERT INTO trabalhos (usuario_id, sequencia_id, etapa, entrada) VALUES (${req.usuario.id}, ${id}, ${etapa}, ${JSON.stringify(entrada)}) RETURNING id`;
+    waitUntil(rodarTrabalho(t.id));
+    res.status(202).json({ trabalhoId: t.id });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 // Progresso da sequência: estado de cada etapa (ok, gerando, fila, erro) e os resultados prontos.
 app.get("/api/sequencias/:id/progresso", exigeLogin, async (req, res) => {
   const id = Number(req.params.id);
   if (!(await podeEditarSequencia(id, req.usuario))) return res.status(404).json({ erro: "Não encontrada" });
   const entregas = await sql`SELECT etapa, conteudo FROM entregas WHERE sequencia_id = ${id}`;
-  const [ultimo] = await sql`SELECT * FROM trabalhos WHERE sequencia_id = ${id} ORDER BY id DESC LIMIT 1`;
+  const ultimos = await sql`SELECT DISTINCT ON (etapa) * FROM trabalhos WHERE sequencia_id = ${id} AND estado <> 'cancelado' ORDER BY etapa, id DESC`;
   const resultados = Object.fromEntries(entregas.map((e) => [e.etapa, e.conteudo]));
   const estados = {};
-  if (ultimo) {
-    let estado = ultimo.estado, erro = ultimo.erro;
+  for (const t of ultimos) {
+    let estado = t.estado, erro = t.erro;
     // Parado há mais de 6 min (função encerrada no meio): conta como falha.
-    if (estado === "gerando" && Date.now() - new Date(ultimo.atualizado_em || ultimo.criado_em).getTime() > 6 * 60 * 1000) {
+    if (estado === "gerando" && Date.now() - new Date(t.atualizado_em || t.criado_em).getTime() > 6 * 60 * 1000) {
       estado = "erro"; erro = "A geração demorou demais nesta etapa. Toque em Tentar de novo.";
     }
-    if (estado === "gerando") { estados[ultimo.etapa] = { tipo: "gerando" }; for (const f of ultimo.fila || []) estados[f] = { tipo: "fila" }; }
-    if (estado === "erro") estados[ultimo.etapa] = { tipo: "erro", msg: erro || "Falha ao gerar" };
+    if (estado === "gerando") { estados[t.etapa] = { tipo: "gerando" }; for (const f of t.fila || []) if (!estados[f]) estados[f] = { tipo: "fila" }; }
+    if (estado === "erro") estados[t.etapa] = { tipo: "erro", msg: erro || "Falha ao gerar" };
   }
   const ativo = Object.values(estados).some((e) => e.tipo === "gerando" || e.tipo === "fila");
   res.json({ resultados, estados, ativo });
@@ -214,6 +256,7 @@ const EXPORTADORES = {
   cronograma: [gerarCronograma, XLSX, "xlsx"],
   docx: [gerarDocx, DOCX, "docx"],
   planoaula: [gerarPlanoAula, DOCX, "docx"],
+  pptx: [gerarSlides, "application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
   pdf: [gerarPdf, "application/pdf", "pdf"],
 };
 

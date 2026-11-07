@@ -757,3 +757,17 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 .titulo-linha strong small { display: inline; margin: 0; }
 /* Aviso vazio não ocupa espaço (evita vão entre o conteúdo e os botões) */
 .aviso:empty { min-height: 0; margin: 0; }
+
+/* ---------- Slides por encontro ---------- */
+.slides-enc { margin-top: var(--esp); padding-top: var(--esp); border-top: 1px solid var(--linha); }
+.slides-enc h3 { font-family: var(--serif); font-size: 1.3rem; font-weight: 400; }
+.lista-slides { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-p); }
+.lista-slides li { border: 1px solid var(--linha); border-radius: var(--raio); padding: 12px var(--esp-m); }
+.lista-slides li > div:first-child { display: grid; gap: 2px; }
+.lista-slides strong { font-family: var(--ui); font-size: .92rem; }
+.lista-slides small { color: var(--tinta-3); font-size: .8rem; }
+.sl-estado { font-size: .82rem; font-weight: 600; }
+.sl-estado.ok { color: var(--verde); }
+.sl-estado.gerando { color: var(--ambar-txt); }
+.sl-estado.erro { color: var(--erro); }
+.previa-notas { margin-top: 6px !important; padding: 8px 10px; border-radius: var(--raio); background: var(--azul-claro); color: var(--tinta) !important; }
