@@ -1,4 +1,4 @@
-import { ICONES } from "./slides.js";
+import { ICONES } from "./icones.js";
 // Sequência de entregas: 1º PER (planilha), 2º Plano de Aula (Word, encontro por encontro),
 // 3º Avaliações de 30 e 60 pontos + gabarito do professor, 4º Atividade do educador (EP-190 + roteiro).
 // Base: MSEP + documento de referência enviado pelo instrutor.

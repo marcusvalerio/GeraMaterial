@@ -3,17 +3,15 @@ import express from "express";
 import crypto from "node:crypto";
 import { waitUntil } from "@vercel/functions";
 import multer from "multer";
-import mammoth from "mammoth";
-import { extractText } from "unpdf";
 import { perguntarJson, provedorAtivo } from "./ia.js";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { SISTEMA, ETAPAS, ORDEM, ANALISE, contexto, promptSlides } from "./prompts.js";
-import { gerarSlides } from "./slides.js";
-import { gerarDocx, gerarPdf } from "./exportar.js";
-import { gerarPlanoAula } from "./planoAula.js";
-import { gerarCronograma } from "./cronograma.js";
-import { gerarPER, gerarEP190 } from "./planilhas.js";
+// Geradores de arquivo e leitores de PDF/Word só carregam quando usados: o servidor liga mais rápido.
+const sob = (mod, nome) => async (...a) => (await import(mod))[nome](...a);
+const gerarSlides = sob("./slides.js", "gerarSlides"), gerarDocx = sob("./exportar.js", "gerarDocx"), gerarPdf = sob("./exportar.js", "gerarPdf");
+const gerarPlanoAula = sob("./planoAula.js", "gerarPlanoAula"), gerarCronograma = sob("./cronograma.js", "gerarCronograma");
+const gerarPER = sob("./planilhas.js", "gerarPER"), gerarEP190 = sob("./planilhas.js", "gerarEP190");
 import { criarSequencia, salvarEntrega, mapaEntregas, listarSequencias, obterSequencia, excluirSequencia, podeEditarSequencia, bancoAtivo } from "./db.js";
 import { carregarUsuario, exigeLogin, rotasAuth, ehGestor } from "./auth.js";
 import { sql } from "./db.js";
@@ -42,8 +40,8 @@ async function textoReferencias(arquivos) {
   for (const f of arquivos || []) {
     const nome = f.originalname;
     let texto;
-    if (nome.toLowerCase().endsWith(".pdf")) texto = (await extractText(new Uint8Array(f.buffer), { mergePages: true })).text;
-    else if (nome.toLowerCase().endsWith(".docx")) texto = (await mammoth.extractRawText({ buffer: f.buffer })).value;
+    if (nome.toLowerCase().endsWith(".pdf")) texto = (await (await import("unpdf")).extractText(new Uint8Array(f.buffer), { mergePages: true })).text;
+    else if (nome.toLowerCase().endsWith(".docx")) texto = (await (await import("mammoth")).default.extractRawText({ buffer: f.buffer })).value;
     else texto = f.buffer.toString("utf8");
     partes.push(`DOCUMENTO DE REFERÊNCIA (${nome}):\n${texto.replace(/\n{3,}/g, "\n\n")}`);
   }
@@ -127,17 +125,30 @@ async function rodarTrabalho(id) {
       ? await executarSlides(Number(t.etapa.split(":")[1]), dados || {}, mapaEntregas(entregas), referencia || "")
       : await executarEtapa(t.etapa, dados || {}, anteriores, referencia || "");
     await salvarEntrega(t.sequencia_id, t.etapa, resultado);
-    await sql`UPDATE trabalhos SET estado = 'ok', atualizado_em = now() WHERE id = ${id}`;
   } catch (e) {
     console.error(e);
     await sql`UPDATE trabalhos SET estado = 'erro', erro = ${e.message}, atualizado_em = now() WHERE id = ${id}`.catch(() => {});
     return; // com erro, a cadeia para; o app mostra "Tentar de novo a partir daqui"
   }
-  const [proxima, ...resto] = t.fila || [];
-  if (!proxima) return;
-  const [n] = await sql`INSERT INTO trabalhos (usuario_id, sequencia_id, etapa, entrada, fila)
-    VALUES (${t.usuario_id}, ${t.sequencia_id}, ${proxima}, ${JSON.stringify(t.entrada)}, ${resto}) RETURNING id`;
-  await dispararTrabalho(n.id, base);
+  const fila = t.fila || [];
+  if (!fila.length) {
+    await sql`UPDATE trabalhos SET estado = 'ok', atualizado_em = now() WHERE id = ${id}`;
+    return;
+  }
+  // Avaliações e Atividade só dependem do Plano de Aula: com o plano pronto, as duas rodam em paralelo.
+  const paralelas = new Set(["avaliacao", "atividade"]);
+  const grupos = paralelas.has(fila[0]) && fila.every((e) => paralelas.has(e))
+    ? fila.map((e) => [e, []])
+    : [[fila[0], fila.slice(1)]];
+  // As próximas entram no banco antes desta virar "ok": o app nunca vê a cadeia parada no meio.
+  const novos = [];
+  for (const [etapa, resto] of grupos) {
+    const [n] = await sql`INSERT INTO trabalhos (usuario_id, sequencia_id, etapa, entrada, fila)
+      VALUES (${t.usuario_id}, ${t.sequencia_id}, ${etapa}, ${JSON.stringify(t.entrada)}, ${resto}) RETURNING id`;
+    novos.push(n.id);
+  }
+  await sql`UPDATE trabalhos SET estado = 'ok', atualizado_em = now() WHERE id = ${id}`;
+  await Promise.all(novos.map((n) => dispararTrabalho(n, base)));
 }
 
 // Roda o trabalho numa chamada nova ao próprio servidor (na Vercel) ou direto (local).
