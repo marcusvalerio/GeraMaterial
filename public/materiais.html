@@ -33,7 +33,7 @@
 </main>
 <script type="module">
 import { $, esc, api, iniciarPagina } from "./comum.js";
-const ETAPAS = [["per", "PER"], ["plano", "EP-190"], ["avaliacao", "Avaliações"], ["atividade", "Atividades"]];
+const ETAPAS = [["per", "PER"], ["plano", "Plano de Aula"], ["avaliacao", "Avaliações"], ["atividade", "Atividades"]];
 const usuario = await iniciarPagina("materiais");
 
 async function carregar() {
@@ -54,7 +54,7 @@ async function carregar() {
         <span class="chips">${ETAPAS.map(([id, nome]) => `<span class="chip${s.etapas.includes(id) ? " ok" : ""}">${nome}</span>`).join("")}</span>
         <span class="item-seq-data">${feitas.length} de 4 · ${new Date(s.criado_em).toLocaleDateString("pt-BR")}</span>
       </a>
-      <button type="button" class="link-remover" data-excluir="${s.id}" aria-label="Excluir ${esc(s.uc)}">Excluir</button>
+      <button type="button" class="link-remover" data-excluir="${s.id}" aria-label="Excluir ${esc(s.uc)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Excluir</button>
     </li>`;
   }).join("");
   ul.querySelectorAll("[data-excluir]").forEach((b) => {

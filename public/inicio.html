@@ -57,7 +57,7 @@ if (usuario) {
   // Quatro cartões: próxima aula, materiais para continuar, diário pendente e turmas.
   const prox = proximas[0];
   const cartao = (idArea, rot, valor, sub, href, alerta = false) => `<a class="home-card${alerta ? " alerta" : ""}" data-area="${idArea}" href="${href}">
-    <span class="home-rot">${icone(area(idArea), 16)}${rot}</span><span class="home-valor">${valor}</span><span class="home-sub">${esc(sub)}</span></a>`;
+    <span class="home-rot">${icone(area(idArea), 16)}${rot}</span><span class="home-valor${valor === 0 || valor === "—" ? " vazio" : ""}">${valor === 0 || valor === "—" ? "Nada por aqui" : valor}</span><span class="home-sub">${esc(sub)}</span></a>`;
   $("#cartoes").innerHTML = [
     cartao("turmas", "Próxima aula", prox ? (prox.data === hoje ? "Hoje" : dataCurta(prox.data)) : "—",
       prox ? `${prox.turma} · aula ${prox.numero_uc} de ${prox.total_uc}` : "Nenhuma aula marcada", prox ? `turmas.html?id=${prox.turma_id}` : "turmas.html"),

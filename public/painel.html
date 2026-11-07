@@ -40,6 +40,7 @@
       <button type="submit" class="btn-gerar btn-curto">Cadastrar</button>
     </form>
     <div class="caixa-senha" id="caixaSenha" hidden></div>
+    <input type="search" id="buscaAcessos" class="busca-acessos" placeholder="Buscar pessoa por nome ou e-mail" aria-label="Buscar pessoa">
     <div id="acessos"></div>
   </section>
 
@@ -138,11 +139,14 @@ async function carregarAcessos() {
         <button type="button" class="btn-secundario" data-novasenha="${u.id}" data-nome="${esc(u.nome)}" data-email="${esc(u.email)}">Nova senha provisória</button>
         ${u.aprovado ? `<button type="button" class="btn-secundario" data-bloquear="${u.id}">Bloquear</button>` : `<button type="button" class="btn-secundario" data-liberar="${u.id}">Liberar</button>`}
         <button type="button" class="link-remover" data-excluir="${u.id}">Excluir</button></div>`;
-      return `<tr class="${u.aprovado ? "" : "pendente"}">
+      return `<tr class="${u.aprovado ? "" : "pendente"}" data-busca="${esc((u.nome + " " + u.email).toLowerCase())}">
         <td class="titulo-linha"><strong>${esc(u.nome)}${eu ? " <small>(você)</small>" : ""}</strong><small>${esc(u.email)}</small></td>
-        ${td("Criada em", new Date(u.criado_em).toLocaleDateString("pt-BR"))}${td("Papel", papel)}${td("Situação", situacao(u))}
+        ${td("Criada em", new Date(u.criado_em).toLocaleDateString("pt-BR"), "so-largo")}${td("Papel", papel)}${td("Situação", situacao(u))}
         <td class="acoes-linha">${acoes}</td></tr>`;
     }).join("")}</tbody></table>`;
+  const busca = $("#buscaAcessos");
+  busca.oninput = () => { const q = busca.value.trim().toLowerCase(); document.querySelectorAll("#acessos tr[data-busca]").forEach((tr) => { tr.hidden = !!q && !tr.dataset.busca.includes(q); }); };
+  busca.oninput();
   const acao = async (id, corpo) => { try { await api(`/api/admin/usuarios/${id}`, { metodo: "PATCH", corpo }); await Promise.all([carregarAcessos(), carregar()]); } catch (e) { alert(e.message); } };
   document.querySelectorAll("[data-liberar]").forEach((b) => { b.onclick = () => acao(b.dataset.liberar, { aprovado: true }); });
   document.querySelectorAll("[data-bloquear]").forEach((b) => { b.onclick = () => confirm("Bloquear o acesso desta conta?") && acao(b.dataset.bloquear, { aprovado: false }); });

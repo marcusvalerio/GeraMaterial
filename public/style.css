@@ -771,3 +771,10 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 .sl-estado.gerando { color: var(--ambar-txt); }
 .sl-estado.erro { color: var(--erro); }
 .previa-notas { margin-top: 6px !important; padding: 8px 10px; border-radius: var(--raio); background: var(--azul-claro); color: var(--tinta) !important; }
+
+/* ---------- Ajustes da revisão de UX ---------- */
+.home-card .home-valor.vazio { font-family: var(--ui); font-size: 1rem; font-weight: 600; color: var(--tinta-3); }
+.item-seq .link-remover { display: inline-flex; align-items: center; gap: 4px; color: var(--erro); opacity: .75; }
+.item-seq .link-remover:hover { opacity: 1; }
+.busca-acessos { width: 100%; margin: var(--esp-m) 0 var(--esp-p); }
+@media (max-width: 760px) { .tabela-cartoes td.so-largo { display: none; } }

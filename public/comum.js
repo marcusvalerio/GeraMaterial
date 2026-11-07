@@ -31,7 +31,7 @@ export const icone = (area, tam = 22) => `<svg class="ico" width="${tam}" height
 // Aparece uma vez por sessão; some com um toque; não aparece com "reduzir movimento".
 export function introAbertura() {
   let jaViu = false;
-  try { jaViu = sessionStorage.getItem("gd_intro") === "1"; sessionStorage.setItem("gd_intro", "1"); } catch { /* sem storage */ }
+  try { jaViu = localStorage.getItem("gd_intro") === "1"; localStorage.setItem("gd_intro", "1"); } catch { /* sem storage */ }
   if (jaViu || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   try { sessionStorage.setItem("gd_intro_agora", "1"); setTimeout(() => sessionStorage.removeItem("gd_intro_agora"), 3000); } catch { /* sem storage */ }
   const el = document.createElement("div");
@@ -46,7 +46,7 @@ export function introAbertura() {
   document.body.append(el);
   const fechar = () => { el.classList.add("saindo"); setTimeout(() => el.remove(), 380); };
   el.addEventListener("click", fechar);
-  setTimeout(fechar, 2100);
+  setTimeout(fechar, 1300);
 }
 
 export async function iniciarPagina(atual) {
