@@ -579,6 +579,9 @@ function dadosDaUc(base, uc) {
   if (!uc) return base;
   const datas = cronogramaDaUc(crono, uc.nome, periodo());
   return { ...base, uc: uc.nome, cargaHorariaUC: uc.cargaHoraria || "", modulo: uc.modulo || "",
+    // Lista oficial da UC lida do plano de curso: a IA tem que seguir exatamente esses tópicos.
+    ...(uc.conhecimentos?.length ? { conhecimentosUC: uc.conhecimentos } : {}),
+    ...(uc.capacidades?.length ? { capacidadesUC: uc.capacidades } : {}),
     cargaHorariaCurso: analise?.cargaHoraria || "",
     ...(datas?.parcial ? { participacao: `O instrutor assume apenas as aulas ${datas.primeira} a ${datas.ultima} de ${datas.total} desta UC (${datas.dataInicio} a ${datas.dataTermino}). As aulas anteriores foram dadas por outro instrutor: não repita o conteúdo inicial, parta do ponto em que a turma está e foque nas capacidades restantes.` } : {}),
     ...(datas && !datas.vazio ? { dataInicio: datas.dataInicio, dataTermino: datas.dataTermino, aulasCronograma: datas.aulas,

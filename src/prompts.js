@@ -34,12 +34,17 @@ export const ETAPAS = {
 Regras:
 - Um bloco em "dias" para CADA encontro do calendário (use as datas informadas; sem calendário, divida a carga horária da UC
   em encontros de 4 horas). Nunca agrupe vários encontros num bloco só.
-- Os conhecimentos vêm do documento de referência, numerados como tópicos e subtópicos (ex.: "1.1 Definição", "1.2 Etapas").
-  Todos os grupos de conhecimentos da UC precisam aparecer distribuídos pelos encontros.
+- Os conhecimentos de cada encontro são itens da lista CONHECIMENTOS OFICIAIS DA UC, copiados com a mesma numeração
+  e as mesmas palavras (ex.: "2.1 Tradicional"). Todos os itens da lista precisam aparecer em algum encontro; um item
+  extenso pode ocupar mais de um encontro (repita o item e diga no objetivo qual parte é trabalhada). Nunca invente itens.
+- "distribuicao": um grupo por tópico principal da lista oficial (ex.: "2. Formas de armazenagem de materiais"),
+  mais as avaliações se ocuparem encontros próprios.
 - Em cada encontro: objetivo claro (verbo no infinitivo), estratégia da MSEP (aula dialogada, estudo de caso, situação-problema,
   projeto, simulação, oficina...), atividade concreta e detalhada que os alunos fazem, e como a aprendizagem é avaliada.
 - Reserve encontros para as avaliações de 30 e 60 pontos (a de 60 pontos no último encontro), coerentes com o formato escolhido.
+  Nos encontros de avaliação, "conhecimentos" lista os itens avaliados com número E nome (ex.: "2.1 Tradicional"), nunca só o número.
 - "distribuicao" soma exatamente a carga horária da UC.
+- Se houver encontros a mais que tópicos, aprofunde com prática, estudo de caso e revisão — sem criar conteúdo fora da lista.
 JSON:
 { "titulo": "PLANO DE AULA – SENAI", "uc": "", "curso": "", "cargaHoraria": "60 horas",
   "organizacao": "15 encontros presenciais de 4 horas", "referencia": "Metodologia SENAI de Educação Profissional (MSEP)",
@@ -113,6 +118,18 @@ export function descreverAvaliacoes(av) {
   return `\nFormato das avaliações escolhido pelo instrutor (obrigatório):\n${um(30, av["30"])}\n${um(60, av["60"])}`;
 }
 
+// Lista oficial de conhecimentos da UC (extraída do plano de curso), numerada: 1, 1.1, 1.2, 2...
+export function conhecimentosOficiais(d) {
+  const cs = Array.isArray(d.conhecimentosUC) ? d.conhecimentosUC : [];
+  if (!cs.length) return "";
+  const linhas = cs.flatMap((c, i) => [`${i + 1}. ${c.topico}`, ...(c.subtopicos || []).map((s, j) => `   ${i + 1}.${j + 1} ${s}`)]);
+  const caps = Array.isArray(d.capacidadesUC) && d.capacidadesUC.length ? `\nCAPACIDADES TÉCNICAS DA UC (do plano de curso):\n${d.capacidadesUC.map((c) => `- ${c}`).join("\n")}` : "";
+  return `\nCONHECIMENTOS OFICIAIS DA UC (do plano de curso; carga horária total ${d.cargaHorariaUC || "-"}):
+${linhas.join("\n")}
+REGRAS OBRIGATÓRIAS sobre os conhecimentos: use EXATAMENTE estes tópicos e subtópicos, com esta numeração e estas palavras.
+Todos precisam aparecer. Não crie tópicos ou subtópicos novos, não troque nomes e não junte itens.${caps}`;
+}
+
 export function contexto(d) {
   return `Dados informados pelo instrutor:
 - Curso: ${d.curso || "-"}${d.cargaHorariaCurso ? ` (${d.cargaHorariaCurso})` : ""}
@@ -127,7 +144,7 @@ export function contexto(d) {
 - Instrutor: ${d.instrutor || "-"} | Segmento: ${d.segmento || "-"}
 - Tema da situação de aprendizagem: ${d.tema || "-"}
 - Recursos/ambiente: ${d.recursos || "-"}
-- Observações: ${d.observacoes || "-"}${d.participacao ? `\n- Participação do instrutor: ${d.participacao}` : ""}${descreverAvaliacoes(d.avaliacoes)}`;
+- Observações: ${d.observacoes || "-"}${conhecimentosOficiais(d)}${d.participacao ? `\n- Participação do instrutor: ${d.participacao}` : ""}${descreverAvaliacoes(d.avaliacoes)}`;
 }
 
 // Leitura do plano de curso: identifica o curso e todas as unidades curriculares.
@@ -136,7 +153,13 @@ Copie nomes e cargas horárias exatamente como estão no documento, sem inventar
 cada UC deve aparecer uma única vez, na ordem do curso. JSON:
 { "curso": "nome do curso", "cargaHoraria": "200h", "modalidade": "Qualificação Profissional", "eixo": "",
   "competenciaGeral": "texto da competência geral",
-  "ucs": [ { "nome": "Fundamentos de Logística", "cargaHoraria": "20h", "modulo": "Básico", "objetivo": "objetivo geral da UC (resumido)" } ] }
+  "ucs": [ { "nome": "Fundamentos de Logística", "cargaHoraria": "20h", "modulo": "Básico", "objetivo": "objetivo geral da UC (resumido)",
+      "capacidades": ["capacidade técnica, frase completa"],
+      "conhecimentos": [ { "topico": "Formas de armazenagem de materiais", "subtopicos": ["Tradicional", "Informatizada (código de barra e RFID)"] } ] } ] }
+Conhecimentos: copie da seção "Conteúdos Formativos" / "Conhecimentos" de cada UC, na ordem do documento. Um tópico é a linha sem
+marcador; os itens com marcador (•) logo abaixo são os seus subtópicos (tópico sem subitens: "subtopicos": []).
+Atenção: no texto extraído, a coluna de capacidades se mistura com a de conhecimentos linha a linha; separe com cuidado
+e reconstrua frases quebradas em várias linhas. Não invente, não resuma e não junte tópicos.
 Se o documento não for um plano de curso, devolva { "curso": "", "ucs": [] }.`;
 
 // Roteiro de uma aula específica do calendário.

@@ -65,7 +65,8 @@ export async function perguntar(system, usuario, opcoes = {}) {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env[p.chave]}` },
       body: JSON.stringify({
         model: modelos[m],
-        temperature: 0.4,
+        // Leitura (rápida) copia dados do documento: temperatura baixa para sair sempre igual.
+        temperature: opcoes.rapido ? 0.1 : 0.4,
         stream: true,
         // Raciocínio curto: o Gemini "pensa" antes de responder e isso pode passar de 5 min (limite da Vercel).
         ...(nome === "gemini" ? { reasoning_effort: process.env.AI_ESFORCO || "low" } : {}),
