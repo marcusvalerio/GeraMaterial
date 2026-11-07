@@ -14,7 +14,7 @@ import { gerarDocx, gerarPdf } from "./exportar.js";
 import { gerarPlanoAula } from "./planoAula.js";
 import { gerarCronograma } from "./cronograma.js";
 import { gerarPER, gerarEP190 } from "./planilhas.js";
-import { criarSequencia, salvarEntrega, listarSequencias, obterSequencia, excluirSequencia, podeEditarSequencia, bancoAtivo } from "./db.js";
+import { criarSequencia, salvarEntrega, mapaEntregas, listarSequencias, obterSequencia, excluirSequencia, podeEditarSequencia, bancoAtivo } from "./db.js";
 import { carregarUsuario, exigeLogin, rotasAuth, ehGestor } from "./auth.js";
 import { sql } from "./db.js";
 import { rotasTurmas } from "./turmas.js";
@@ -124,7 +124,7 @@ async function rodarTrabalho(id) {
     const entregas = await sql`SELECT etapa, conteudo FROM entregas WHERE sequencia_id = ${t.sequencia_id}`;
     const anteriores = Object.fromEntries(entregas.filter((e) => ORDEM.indexOf(e.etapa) < ORDEM.indexOf(t.etapa)).map((e) => [e.etapa, e.conteudo]));
     const resultado = t.etapa.startsWith("slides:")
-      ? await executarSlides(Number(t.etapa.split(":")[1]), dados || {}, Object.fromEntries(entregas.map((e) => [e.etapa, e.conteudo])), referencia || "")
+      ? await executarSlides(Number(t.etapa.split(":")[1]), dados || {}, mapaEntregas(entregas), referencia || "")
       : await executarEtapa(t.etapa, dados || {}, anteriores, referencia || "");
     await salvarEntrega(t.sequencia_id, t.etapa, resultado);
     await sql`UPDATE trabalhos SET estado = 'ok', atualizado_em = now() WHERE id = ${id}`;
@@ -222,7 +222,7 @@ app.get("/api/sequencias/:id/progresso", exigeLogin, async (req, res) => {
   if (!(await podeEditarSequencia(id, req.usuario))) return res.status(404).json({ erro: "Não encontrada" });
   const entregas = await sql`SELECT etapa, conteudo FROM entregas WHERE sequencia_id = ${id}`;
   const ultimos = await sql`SELECT DISTINCT ON (etapa) * FROM trabalhos WHERE sequencia_id = ${id} AND estado <> 'cancelado' ORDER BY etapa, id DESC`;
-  const resultados = Object.fromEntries(entregas.map((e) => [e.etapa, e.conteudo]));
+  const resultados = mapaEntregas(entregas);
   const estados = {};
   for (const t of ultimos) {
     let estado = t.estado, erro = t.erro;

@@ -16,8 +16,27 @@ export async function criarSequencia(dados, referencias = [], usuarioId = null, 
   return s.id;
 }
 
+// Slides por encontro ficam todos numa entrega "slides": { encontros: { "3": {...} } }.
+export function mapaEntregas(entregas) {
+  const m = {};
+  for (const e of entregas) {
+    if (e.etapa === "slides" && e.conteudo?.encontros) for (const [n, c] of Object.entries(e.conteudo.encontros)) m[`slides:${n}`] = c;
+    else m[e.etapa] = e.conteudo;
+  }
+  return m;
+}
+
 export async function salvarEntrega(sequenciaId, etapa, conteudo) {
   if (!sql || !sequenciaId) return;
+  if (etapa.startsWith("slides:")) {
+    const n = etapa.split(":")[1];
+    const novo = JSON.stringify({ encontros: { [n]: conteudo } });
+    await sql`
+      INSERT INTO entregas (sequencia_id, etapa, conteudo) VALUES (${sequenciaId}, 'slides', ${novo})
+      ON CONFLICT (sequencia_id, etapa) DO UPDATE SET gerado_em = now(),
+        conteudo = jsonb_build_object('encontros', COALESCE(entregas.conteudo->'encontros', '{}'::jsonb) || (EXCLUDED.conteudo->'encontros'))`;
+    return;
+  }
   await sql`
     INSERT INTO entregas (sequencia_id, etapa, conteudo) VALUES (${sequenciaId}, ${etapa}, ${JSON.stringify(conteudo)})
     ON CONFLICT (sequencia_id, etapa) DO UPDATE SET conteudo = EXCLUDED.conteudo, gerado_em = now()`;
@@ -43,7 +62,7 @@ export async function obterSequencia(id, usuario = null) {
   const [s] = await sql`SELECT * FROM sequencias WHERE id = ${id}`;
   if (!s || (!gestor(usuario) && Number(s.usuario_id) !== usuario?.id)) return null;
   const entregas = await sql`SELECT etapa, conteudo FROM entregas WHERE sequencia_id = ${id}`;
-  s.resultados = Object.fromEntries(entregas.map((e) => [e.etapa, e.conteudo]));
+  s.resultados = mapaEntregas(entregas);
   return s;
 }
 
