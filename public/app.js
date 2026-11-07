@@ -588,23 +588,36 @@ function dadosDaUc(base, uc) {
 // Gera a fila a partir da UC `inicioUc`, começando na etapa `inicioEtapa` dela.
 // Acompanha o trabalho no servidor. Falhas de rede (app em segundo plano, sinal ruim) não
 // interrompem: continua consultando até o servidor dizer que terminou.
-async function acompanhar(id) {
+const MSG_GERANDO = "Escrevendo agora. Pode sair do app: a sequência continua sendo gerada.";
+
+// Acompanha a sequência no servidor até a cadeia terminar. Falhas de rede (app em segundo plano, sinal ruim)
+// não interrompem: continua consultando. Devolve true se tudo terminou sem erro.
+async function acompanharSequencia(it) {
   const espera = (ms) => new Promise((ok) => setTimeout(ok, ms));
   for (;;) {
-    await espera(document.hidden ? 8000 : 4000);
+    await espera(document.hidden ? 8000 : 3000);
     let j;
     try {
-      const r = await fetch(`/api/trabalhos/${id}`, { cache: "no-store" });
-      if (r.status === 401) { location.href = "entrar.html?voltar=index.html"; throw new Error("Sessão expirada"); }
-      if (r.status === 404) throw new Error("Trabalho não encontrado");
+      const r = await fetch(`/api/sequencias/${it.sequenciaId}/progresso`, { cache: "no-store" });
+      if (r.status === 401) { location.href = "entrar.html?voltar=index.html"; return false; }
       if (!r.ok) continue;
       j = await r.json();
-    } catch (e) {
-      if (/Sessão|não encontrado/.test(e.message)) throw e;
-      continue;
-    }
-    if (j.estado === "ok") return j;
-    if (j.estado === "erro") throw new Error(j.erro || "Falha ao gerar");
+    } catch { continue; }
+    aplicarProgresso(it, j);
+    render();
+    if (!j.ativo) return !Object.values(j.estados).some((e) => e.tipo === "erro");
+  }
+}
+
+function aplicarProgresso(it, j) {
+  Object.assign(it.resultados, j.resultados);
+  for (const e of ETAPAS) {
+    const st = j.estados[e.id];
+    if (st?.tipo === "gerando") it.estados[e.id] = { tipo: "gerando", msg: MSG_GERANDO };
+    else if (st?.tipo === "fila") it.estados[e.id] = { tipo: "", msg: "Na fila" };
+    else if (st?.tipo === "erro") it.estados[e.id] = { tipo: "erro", msg: st.msg };
+    else if (it.resultados[e.id]) it.estados[e.id] = { tipo: "ok", msg: "Pronto para baixar" };
+    else delete it.estados[e.id];
   }
 }
 
@@ -632,39 +645,32 @@ async function gerarFila(inicioUc = 0, inicioEtapa = 0, continuar = false) {
     const it = fila[k];
     const dados = (continuar && it.dados) || dadosDaUc(base, it.uc);
     it.dados = dados;
-    for (let i = k === inicioUc ? inicioEtapa : 0; i < ETAPAS.length; i++) {
-      const etapa = ETAPAS[i];
-      // Na retomada, pula o que já está pronto (exceto a etapa pedida).
-      if (it.resultados[etapa.id] && !(k === inicioUc && i === inicioEtapa)) continue;
-      it.estados[etapa.id] = { tipo: "gerando", msg: "Escrevendo agora, leva de 1 a 4 minutos" };
-      render();
-      const corpo = new FormData();
-      corpo.append("dados", JSON.stringify(dados));
-      corpo.append("anteriores", JSON.stringify(it.resultados));
-      if (it.sequenciaId) corpo.append("sequenciaId", it.sequenciaId);
-      if (turmaAtual || it.turmaId) corpo.append("turmaId", turmaAtual?.id || it.turmaId);
-      arquivos.forEach((f) => corpo.append("referencias", f));
-      try {
-        const r = await fetch(`/api/gerar/${etapa.id}`, { method: "POST", body: corpo });
-        let j = await r.json();
-        if (r.status === 401) { location.href = "entrar.html?voltar=index.html"; return; }
-        if (!r.ok) throw new Error(j.erro || "Falha ao gerar");
-        it.sequenciaId = j.sequenciaId || it.sequenciaId;
-        if (j.trabalhoId) {
-          it.estados[etapa.id].msg = "Escrevendo agora, leva de 1 a 4 minutos. Pode sair do app, continua gerando.";
-          render();
-          j = await acompanhar(j.trabalhoId);
-        }
-        it.resultados[etapa.id] = j.resultado;
-        it.sequenciaId = j.sequenciaId || it.sequenciaId;
-        it.estados[etapa.id] = { tipo: "ok", msg: "Pronto para baixar" };
-      } catch (e) {
-        it.estados[etapa.id] = { tipo: "erro", msg: e.message };
-        parou = true;
-        break;
-      }
-      render();
+    // Etapas a gerar nesta UC: a pedida e as que ainda faltam depois dela. O servidor encadeia todas sozinho.
+    const ini = k === inicioUc ? inicioEtapa : 0;
+    const etapas = ETAPAS.slice(ini).filter((e, j) => j === 0 ? true : !it.resultados[e.id]).map((e) => e.id);
+    if (!etapas.length) continue;
+    etapas.forEach((id, j) => { it.estados[id] = j === 0 ? { tipo: "gerando", msg: MSG_GERANDO } : { tipo: "", msg: "Na fila" }; });
+    render();
+    const corpo = new FormData();
+    corpo.append("dados", JSON.stringify(dados));
+    corpo.append("anteriores", JSON.stringify(it.resultados));
+    corpo.append("seguir", JSON.stringify(etapas.slice(1)));
+    if (it.sequenciaId) corpo.append("sequenciaId", it.sequenciaId);
+    if (turmaAtual || it.turmaId) corpo.append("turmaId", turmaAtual?.id || it.turmaId);
+    arquivos.forEach((f) => corpo.append("referencias", f));
+    try {
+      const r = await fetch(`/api/gerar/${etapas[0]}`, { method: "POST", body: corpo });
+      const j = await r.json();
+      if (r.status === 401) { location.href = "entrar.html?voltar=index.html"; return; }
+      if (!r.ok) throw new Error(j.erro || "Falha ao gerar");
+      it.sequenciaId = j.sequenciaId || it.sequenciaId;
+      if (j.resultado) { it.resultados[etapas[0]] = j.resultado; it.estados[etapas[0]] = { tipo: "ok", msg: "Pronto para baixar" }; }
+      else if (!(await acompanharSequencia(it))) parou = true;
+    } catch (e) {
+      it.estados[etapas[0]] = { tipo: "erro", msg: e.message };
+      parou = true;
     }
+    render();
   }
   gerando = false;
   $("#btnGerar").disabled = false;
@@ -749,6 +755,21 @@ async function abrir(id) {
   aplicarModoUc();
   render();
   mostrarTela(true);
+  retomarSeAtiva(fila[0]);
+}
+
+async function retomarSeAtiva(it) {
+  try {
+    const j = await (await fetch(`/api/sequencias/${it.sequenciaId}/progresso`, { cache: "no-store" })).json();
+    aplicarProgresso(it, j);
+    render();
+    if (!j.ativo || gerando) return;
+    gerando = true;
+    render();
+    await acompanharSequencia(it);
+  } catch { /* sem conexão: fica o que já carregou */ }
+  gerando = false;
+  render();
 }
 
 function limparPlano() {

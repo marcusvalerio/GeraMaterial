@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import crypto from "node:crypto";
 import { waitUntil } from "@vercel/functions";
 import multer from "multer";
 import mammoth from "mammoth";
@@ -91,13 +92,57 @@ async function executarEtapa(etapaId, dados, anteriores, referencia) {
   return resultado;
 }
 
-// A geração roda no servidor em segundo plano: o app pode ser fechado ou ir para o fundo
-// (o celular corta a conexão) e o trabalho continua. O app acompanha por /api/trabalhos/:id.
+// ---------- Geração em cadeia, no servidor ----------
+// O app pede a primeira etapa e a lista das seguintes ("seguir"). O servidor guarda o pedido e, ao terminar
+// cada etapa, dispara sozinho a próxima numa chamada nova (cada uma com o seu limite de 5 min da Vercel).
+// Assim a sequência inteira fica pronta mesmo com o app fechado; o app só acompanha o progresso.
+const SEGREDO_INTERNO = crypto.createHash("sha256").update(`cadeia:${process.env.SESSION_SECRET || "dev"}`).digest("hex");
+
+async function rodarTrabalho(id) {
+  const [t] = await sql`SELECT * FROM trabalhos WHERE id = ${id}`;
+  if (!t || t.estado !== "gerando") return;
+  const { dados, referencia, base } = t.entrada || {};
+  try {
+    const entregas = await sql`SELECT etapa, conteudo FROM entregas WHERE sequencia_id = ${t.sequencia_id}`;
+    const anteriores = Object.fromEntries(entregas.filter((e) => ORDEM.indexOf(e.etapa) < ORDEM.indexOf(t.etapa)).map((e) => [e.etapa, e.conteudo]));
+    const resultado = await executarEtapa(t.etapa, dados || {}, anteriores, referencia || "");
+    await salvarEntrega(t.sequencia_id, t.etapa, resultado);
+    await sql`UPDATE trabalhos SET estado = 'ok', atualizado_em = now() WHERE id = ${id}`;
+  } catch (e) {
+    console.error(e);
+    await sql`UPDATE trabalhos SET estado = 'erro', erro = ${e.message}, atualizado_em = now() WHERE id = ${id}`.catch(() => {});
+    return; // com erro, a cadeia para; o app mostra "Tentar de novo a partir daqui"
+  }
+  const [proxima, ...resto] = t.fila || [];
+  if (!proxima) return;
+  const [n] = await sql`INSERT INTO trabalhos (usuario_id, sequencia_id, etapa, entrada, fila)
+    VALUES (${t.usuario_id}, ${t.sequencia_id}, ${proxima}, ${JSON.stringify(t.entrada)}, ${resto}) RETURNING id`;
+  await dispararTrabalho(n.id, base);
+}
+
+// Roda o trabalho numa chamada nova ao próprio servidor (na Vercel) ou direto (local).
+async function dispararTrabalho(id, base) {
+  if (!process.env.VERCEL || !base) { waitUntil(rodarTrabalho(id)); return; }
+  try {
+    await fetch(`${base}/api/interno/trabalho/${id}`, { method: "POST", headers: { "x-interno": SEGREDO_INTERNO }, signal: AbortSignal.timeout(10000) });
+  } catch (e) {
+    console.error("Falha ao disparar a próxima etapa, rodando aqui:", e.message);
+    waitUntil(rodarTrabalho(id));
+  }
+}
+
+app.post("/api/interno/trabalho/:id", (req, res) => {
+  if (req.headers["x-interno"] !== SEGREDO_INTERNO) return res.status(403).json({ erro: "Proibido" });
+  waitUntil(rodarTrabalho(Number(req.params.id)));
+  res.status(202).json({ ok: true });
+});
+
 app.post("/api/gerar/:etapa", exigeLogin, upload.array("referencias"), async (req, res) => {
   try {
     if (!ETAPAS[req.params.etapa]) return res.status(400).json({ erro: "Etapa inválida" });
     const dados = JSON.parse(req.body.dados || "{}");
     const anteriores = JSON.parse(req.body.anteriores || "{}");
+    const seguir = JSON.parse(req.body.seguir || "[]").filter((e) => ETAPAS[e] && e !== req.params.etapa);
 
     // Sem arquivo enviado, usa o plano de curso guardado na turma.
     let referencia = await textoReferencias(req.files);
@@ -113,23 +158,41 @@ app.post("/api/gerar/:etapa", exigeLogin, upload.array("referencias"), async (re
     if (!sql) return res.json({ sequenciaId, resultado: await executarEtapa(req.params.etapa, dados, anteriores, referencia) });
 
     if (!sequenciaId) sequenciaId = await criarSequencia(dados, (req.files || []).map((f) => f.originalname), req.usuario.id, turmaId);
-    const [t] = await sql`INSERT INTO trabalhos (usuario_id, sequencia_id, etapa) VALUES (${req.usuario.id}, ${sequenciaId}, ${req.params.etapa}) RETURNING id`;
-    const tarefa = (async () => {
-      try {
-        const resultado = await executarEtapa(req.params.etapa, dados, anteriores, referencia);
-        await salvarEntrega(sequenciaId, req.params.etapa, resultado);
-        await sql`UPDATE trabalhos SET estado = 'ok', atualizado_em = now() WHERE id = ${t.id}`;
-      } catch (e) {
-        console.error(e);
-        await sql`UPDATE trabalhos SET estado = 'erro', erro = ${e.message}, atualizado_em = now() WHERE id = ${t.id}`.catch(() => {});
-      }
-    })();
-    waitUntil(tarefa);
+    // Etapas anteriores que o app mandou e ainda não estão no banco (ex.: retomada) ficam guardadas.
+    for (const [et, r] of Object.entries(anteriores)) if (ETAPAS[et] && r) await salvarEntrega(sequenciaId, et, r).catch(() => {});
+    // Um pedido novo para esta sequência cancela a cadeia antiga que ainda estiver rodando.
+    await sql`UPDATE trabalhos SET estado = 'cancelado', fila = '{}' WHERE sequencia_id = ${sequenciaId} AND estado = 'gerando'`;
+    const base = `${req.headers["x-forwarded-proto"] || req.protocol}://${req.headers.host}`;
+    const entrada = { dados, referencia, base };
+    const [t] = await sql`INSERT INTO trabalhos (usuario_id, sequencia_id, etapa, entrada, fila)
+      VALUES (${req.usuario.id}, ${sequenciaId}, ${req.params.etapa}, ${JSON.stringify(entrada)}, ${seguir}) RETURNING id`;
+    waitUntil(rodarTrabalho(t.id));
     res.status(202).json({ sequenciaId, trabalhoId: t.id });
   } catch (e) {
     console.error(e);
     res.status(500).json({ erro: e.message });
   }
+});
+
+// Progresso da sequência: estado de cada etapa (ok, gerando, fila, erro) e os resultados prontos.
+app.get("/api/sequencias/:id/progresso", exigeLogin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!(await podeEditarSequencia(id, req.usuario))) return res.status(404).json({ erro: "Não encontrada" });
+  const entregas = await sql`SELECT etapa, conteudo FROM entregas WHERE sequencia_id = ${id}`;
+  const [ultimo] = await sql`SELECT * FROM trabalhos WHERE sequencia_id = ${id} ORDER BY id DESC LIMIT 1`;
+  const resultados = Object.fromEntries(entregas.map((e) => [e.etapa, e.conteudo]));
+  const estados = {};
+  if (ultimo) {
+    let estado = ultimo.estado, erro = ultimo.erro;
+    // Parado há mais de 6 min (função encerrada no meio): conta como falha.
+    if (estado === "gerando" && Date.now() - new Date(ultimo.atualizado_em || ultimo.criado_em).getTime() > 6 * 60 * 1000) {
+      estado = "erro"; erro = "A geração demorou demais nesta etapa. Toque em Tentar de novo.";
+    }
+    if (estado === "gerando") { estados[ultimo.etapa] = { tipo: "gerando" }; for (const f of ultimo.fila || []) estados[f] = { tipo: "fila" }; }
+    if (estado === "erro") estados[ultimo.etapa] = { tipo: "erro", msg: erro || "Falha ao gerar" };
+  }
+  const ativo = Object.values(estados).some((e) => e.tipo === "gerando" || e.tipo === "fila");
+  res.json({ resultados, estados, ativo });
 });
 
 app.get("/api/trabalhos/:id", exigeLogin, async (req, res) => {
