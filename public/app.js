@@ -773,7 +773,7 @@ function renderSlides(it) {
                <button type="button" data-sl-baixar="${n}">Baixar · PowerPoint</button>
                <button type="button" class="alt" data-sl-gerar="${n}">Gerar de novo</button>`
         : `<button type="button" data-sl-gerar="${n}">${st?.tipo === "erro" ? "Tentar de novo" : "Gerar slides"}</button>`;
-      return `<li><div><strong>Encontro ${n} – ${esc(d.titulo || "")}</strong><small>${esc([d.data, d.horas].filter(Boolean).join(" · "))}</small>${estado}</div>
+      return `<li><div><strong>Encontro ${n} – ${esc(d.titulo || "")}</strong><small>${esc([d.data, d.horas].filter((v) => v && !/dd\/mm/i.test(v)).join(" · "))}</small>${estado}</div>
         <div class="acoes">${botoes}</div></li>`;
     }).join("")}</ol>`;
   caixa.querySelectorAll("[data-sl-gerar]").forEach((b) => { b.onclick = () => gerarSlidesEncontro(it, Number(b.dataset.slGerar)); });
@@ -842,7 +842,7 @@ function htmlGenerico(o) {
 function htmlPlano(r) {
   return `<h3>${esc(r.titulo || "Plano de Aula")}</h3><p><strong>${esc(r.uc)}</strong> · ${esc(r.cargaHoraria)} · ${esc(r.organizacao)}</p>
     ${r.objetivoGeral ? `<h4>Objetivo geral</h4><p>${esc(r.objetivoGeral)}</p>` : ""}
-    ${(r.dias || []).map((d, i) => `<h4 class="enc-titulo">Encontro ${d.numero || i + 1} – ${esc(d.titulo)} ${d.data ? `· ${esc(d.data)}` : ""}
+    ${(r.dias || []).map((d, i) => `<h4 class="enc-titulo">Encontro ${d.numero || i + 1} – ${esc(d.titulo)} ${d.data && !/dd\/mm/i.test(d.data) ? `· ${esc(d.data)}` : ""}
         <button type="button" class="mini" data-refazer-enc="${d.numero || i + 1}">Refazer este encontro</button></h4>
       <ul>${(d.conhecimentos || []).map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
       <p><strong>Objetivo:</strong> ${esc(d.objetivo)}</p><p><strong>Estratégia MSEP:</strong> ${esc(d.estrategia)}</p>
@@ -872,7 +872,7 @@ function abrirPrevia(et, r, chave = et.id) {
 }
 
 // Editor da prévia: cada texto do material vira um campo. Salvar grava no servidor e os downloads já saem com a edição.
-const ROTULOS_EDITOR = { titulo: "Título", texto: "Texto", paragrafos: "Parágrafo", itens: "Item", objetivo: "Objetivo", estrategia: "Estratégia",
+const ROTULOS_EDITOR = { titulo: "Título", texto: "Texto", paragrafos: "Parágrafo", itens: "Item", objetivo: "Objetivo", estrategia: "Estratégia", uc: "Unidade curricular", curso: "Curso", data: "Data", horas: "Horas", cargaHoraria: "Carga horária", organizacao: "Organização", objetivoGeral: "Objetivo geral", recursos: "Recursos", instrumentos: "Instrumentos", resultadoEsperado: "Resultado esperado", olho: "Rótulo", situacao: "Situação", perguntas: "Pergunta", instrucoes: "Instrução", entrega: "Entrega", frase: "Frase", nota: "Nota", rotulo: "Rótulo",
   atividade: "Atividade", avaliacao: "Avaliação", notas: "Notas do professor", conhecimentos: "Conhecimento", subtitulo: "Subtítulo" };
 function folhasTexto(obj, caminho = [], out = []) {
   if (typeof obj === "string") { if (!["conferencia", "layout", "icone"].includes(caminho.at(-1))) out.push({ caminho, valor: obj }); }
