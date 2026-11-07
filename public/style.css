@@ -25,7 +25,7 @@
   --borda-forte: var(--borda-forte);
   --azul-hover: var(--azul-hover);
 
-  --serif: "Geist Serif", Georgia, serif;
+  --serif: "DM Sans", Geist, Inter, system-ui, sans-serif;
   --ui: Geist, Inter, system-ui, sans-serif;
   --texto: Inter, system-ui, sans-serif;
   --raio: 12px;      /* campos, botões, itens de lista */
@@ -41,7 +41,7 @@ body { margin: 0; background: var(--papel); color: var(--tinta); font-family: va
 button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; border-radius: var(--raio); }
-h1, h2, h3 { margin: 0; font-weight: 400; }
+h1, h2, h3 { margin: 0; font-weight: 600; }
 
 /* ---------- Topo ---------- */
 .topo { display: flex; justify-content: space-between; align-items: center; gap: var(--esp-m); padding: var(--esp-m) clamp(16px, 4vw, 48px); border-bottom: 1px solid var(--linha); background: var(--papel); position: sticky; top: 0; z-index: 5; }
@@ -271,7 +271,7 @@ input[type=date] { font-family: var(--texto); }
 
 .indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--esp-p); margin-bottom: var(--esp); }
 .indicadores > div { background: var(--folha); border: 1px solid var(--linha); border-radius: var(--raio-g); padding: var(--esp-m) var(--esp-m); }
-.indicadores strong { display: block; font-family: var(--serif); font-weight: 400; font-size: 2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.indicadores strong { display: block; font-family: var(--serif); font-weight: 600; font-size: 2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .indicadores small { font-size: 1rem; color: var(--tinta-3); }
 .indicadores span { font-size: .82rem; color: var(--tinta-2); }
 .indicadores em { display: block; font-style: normal; font-family: var(--ui); font-size: .75rem; font-weight: 600; margin-top: 4px; }
@@ -760,7 +760,7 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 
 /* ---------- Slides por encontro ---------- */
 .slides-enc { margin-top: var(--esp); padding-top: var(--esp); border-top: 1px solid var(--linha); }
-.slides-enc h3 { font-family: var(--serif); font-size: 1.3rem; font-weight: 400; }
+.slides-enc h3 { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; }
 .lista-slides { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-p); }
 .lista-slides li { border: 1px solid var(--linha); border-radius: var(--raio); padding: 12px var(--esp-m); }
 .lista-slides li > div:first-child { display: grid; gap: 2px; }
@@ -778,3 +778,7 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 .item-seq .link-remover:hover { opacity: 1; }
 .busca-acessos { width: 100%; margin: var(--esp-m) 0 var(--esp-p); }
 @media (max-width: 760px) { .tabela-cartoes td.so-largo { display: none; } }
+
+/* Títulos em DM Sans: peso 600 e espaçamento um pouco mais justo (substitui a serifada). */
+h1, h2, h3, .home-card .home-valor, .indicadores strong { letter-spacing: -.025em; }
+.home-card .home-valor.vazio { letter-spacing: 0; }
