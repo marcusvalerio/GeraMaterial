@@ -148,7 +148,7 @@ export function gerarPER(p) {
     const h = refsData.reduce((s, r) => s + (porCelula[r]?.horas || 0), 0);
     if (h) v[refCh] = fmtHoras(h);
   }
-  const conh = p.conhecimentos || [];
+  const conh = Array.isArray(p.conhecimentos) ? p.conhecimentos : [];
   // Se houver mais conhecimentos que blocos, o último bloco recebe o restante.
   PER_CONHEC.forEach((ref, i) => {
     v[ref] = i === PER_CONHEC.length - 1 ? conh.slice(i).join("\n") : conh[i];
@@ -185,6 +185,6 @@ export function gerarEP190(p) {
   if (camposConhecidos < 2) {
     linhasGenericas(p).forEach(([k, valor], i) => { anexos[`B${60 + i * 2}`] = `${k}: ${valor}`; });
   }
-  (p.passos || []).slice(0, 25).forEach((t, i) => { anexos[`B${34 + i}`] = t; });
+  (Array.isArray(p.passos) ? p.passos : []).slice(0, 25).forEach((t, i) => { anexos[`B${34 + i}`] = t; });
   return preencher("EP-190_MODELO.xlsm", { sheet1: fl1, sheet2: fl2, sheet3: anexos });
 }
