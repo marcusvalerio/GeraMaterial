@@ -37,9 +37,63 @@ function cabecalhoDocx(c) {
   return [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: linhas }), new Paragraph("")];
 }
 
+
+function rotulo(chave) {
+  return String(chave).replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
+}
+
+// Aceita tanto o formato antigo (titulo/secoes) quanto objetos estruturados
+// produzidos por versões novas dos prompts.
+function secoesDoMaterial(material) {
+  if (Array.isArray(material?.secoes) && material.secoes.length) return material.secoes;
+  const secoes = [];
+  const adicionar = (titulo, valor) => {
+    if (valor == null || valor === "") return;
+    if (Array.isArray(valor)) {
+      const simples = valor.every((x) => x == null || ["string", "number", "boolean"].includes(typeof x));
+      if (simples) {
+        secoes.push({ titulo, itens: valor.filter((x) => x != null && x !== "").map(String) });
+      } else {
+        valor.forEach((item, i) => adicionar(`${titulo} — ${i + 1}`, item));
+      }
+      return;
+    }
+    if (typeof valor === "object") {
+      const campos = Object.entries(valor);
+      const cabecalho = campos.every(([, v]) => v == null || ["string", "number", "boolean"].includes(typeof v));
+      if (cabecalho && campos.length) {
+        secoes.push({ titulo, paragrafos: campos.filter(([, v]) => v != null && v !== "").map(([k, v]) => `${rotulo(k)}: ${v}`) });
+      } else {
+        const filhos = [];
+        for (const [k, v] of campos) {
+          const antes = secoes.length;
+          adicionar(rotulo(k), v);
+          if (secoes.length > antes) filhos.push(...secoes.splice(antes));
+        }
+        if (filhos.length) secoes.push({ titulo, paragrafos: filhos.flatMap((s) => [s.titulo, ...(s.paragrafos || []), ...(s.itens || []).map((x) => `• ${x}`)]) });
+      }
+      return;
+    }
+    secoes.push({ titulo, paragrafos: [String(valor)] });
+  };
+  for (const [chave, valor] of Object.entries(material || {})) {
+    if (["titulo", "cabecalho", "secoes"].includes(chave)) continue;
+    adicionar(rotulo(chave), valor);
+  }
+  return secoes;
+}
+
+function normalizarMaterial(m) {
+  const secoes = secoesDoMaterial(m);
+  const temConteudo = secoes.some((s) => (s.paragrafos || []).length || (s.itens || []).length || s.tabela?.linhas?.length);
+  if (!temConteudo && !m?.titulo) throw new Error("O material recebido não contém conteúdo para exportar.");
+  return { ...m, titulo: m?.titulo || "Material pedagógico", secoes };
+}
+
 export async function gerarDocx(m) {
+  m = normalizarMaterial(m);
   const filhos = [...(m.cabecalho ? cabecalhoDocx(m.cabecalho) : []), new Paragraph({ text: m.titulo, heading: HeadingLevel.TITLE })];
-  for (const s of m.secoes || []) {
+  for (const s of m.secoes) {
     filhos.push(new Paragraph({ text: s.titulo, heading: HeadingLevel.HEADING_1 }));
     for (const p of s.paragrafos || []) filhos.push(new Paragraph({ children: [new TextRun(p)] }));
     for (const i of s.itens || []) filhos.push(new Paragraph({ text: i, bullet: { level: 0 } }));
@@ -70,6 +124,7 @@ export async function gerarDocx(m) {
 }
 
 export function gerarPdf(m) {
+  m = normalizarMaterial(m);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 50, size: "A4" });
     const partes = [];
@@ -97,7 +152,7 @@ export function gerarPdf(m) {
       doc.x = x0; doc.y = y + 16;
     }
     doc.fillColor(`#${AZUL}`).fontSize(18).font("Titulo").text(m.titulo).moveDown();
-    for (const s of m.secoes || []) {
+    for (const s of m.secoes) {
       doc.fillColor(`#${AZUL}`).fontSize(14).font("Titulo").text(s.titulo).moveDown(0.3);
       doc.fillColor("black").fontSize(10.5).font("Texto");
       for (const p of s.paragrafos || []) doc.text(p, { align: "justify" }).moveDown(0.4);
