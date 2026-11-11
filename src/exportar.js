@@ -45,7 +45,18 @@ function rotulo(chave) {
 // Aceita tanto o formato antigo (titulo/secoes) quanto objetos estruturados
 // produzidos por versões novas dos prompts.
 function secoesDoMaterial(material) {
-  if (Array.isArray(material?.secoes) && material.secoes.length) return material.secoes;
+  if (Array.isArray(material?.secoes) && material.secoes.length) {
+    return material.secoes.map((secao) => {
+      const extras = Object.fromEntries(Object.entries(secao || {}).filter(([k]) => !["titulo", "paragrafos", "itens", "tabela"].includes(k)));
+      const convertidas = secoesDoMaterial(extras);
+      return {
+        ...secao,
+        paragrafos: [...(Array.isArray(secao?.paragrafos) ? secao.paragrafos : []),
+          ...convertidas.flatMap((s) => [s.titulo, ...(s.paragrafos || []), ...(s.itens || []).map((x) => String(x))])],
+        itens: Array.isArray(secao?.itens) ? secao.itens : [],
+      };
+    });
+  }
   const secoes = [];
   const adicionar = (titulo, valor) => {
     if (valor == null || valor === "") return;
@@ -86,7 +97,7 @@ function secoesDoMaterial(material) {
 function normalizarMaterial(m) {
   const secoes = secoesDoMaterial(m);
   const temConteudo = secoes.some((s) => (s.paragrafos || []).length || (s.itens || []).length || s.tabela?.linhas?.length);
-  if (!temConteudo && !m?.titulo) throw new Error("O material recebido não contém conteúdo para exportar.");
+  if (!temConteudo) throw new Error("O material recebido não contém conteúdo para exportar. A geração precisa ser refeita antes do download.");
   return { ...m, titulo: m?.titulo || "Material pedagógico", secoes };
 }
 
