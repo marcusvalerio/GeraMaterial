@@ -68,7 +68,30 @@ async function preencher(arquivo, valoresPorAba) {
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }
 
+
 const lista = (v) => (Array.isArray(v) ? v.join("\n") : v);
+
+// Converte qualquer estrutura recebida em linhas legíveis. Serve como
+// salvaguarda quando o formato do JSON muda e os campos do modelo não coincidem.
+function linhasGenericas(obj, prefixo = "") {
+  const saida = [];
+  for (const [chave, valor] of Object.entries(obj || {})) {
+    if (valor == null || valor === "" || chave === "cabecalho") continue;
+    const nome = prefixo ? `${prefixo} / ${chave}` : chave;
+    if (Array.isArray(valor)) {
+      valor.forEach((item, i) => {
+        if (item && typeof item === "object") saida.push(...linhasGenericas(item, `${nome} ${i + 1}`));
+        else if (item != null && item !== "") saida.push([`${nome} ${i + 1}`, String(item)]);
+      });
+    } else if (typeof valor === "object") {
+      saida.push(...linhasGenericas(valor, nome));
+    } else {
+      saida.push([nome, String(valor)]);
+    }
+  }
+  return saida;
+}
+
 
 // ---------- PER (Plano de Ensino e Recursos) ----------
 // Posições das células conforme o modelo (blocos mesclados da tabela).
@@ -113,14 +136,19 @@ export function gerarPER(p) {
     C82: p.avaliacao60?.instrumento, I82: p.avaliacao60?.criterios, A82: p.avaliacao60?.data,
     A85: `Nome do instrutor: ${p.instrutor ?? ""}`,
   };
-  const linhas = distribuirAulas(p.aulas || []);
+  const camposConhecidos = [p.curso, p.uc, p.objetivoUC, p.competenciaGeral, p.capacidadesTecnicas, p.conhecimentos, p.estrategias, p.criterios, p.aulas, p.avaliacao30, p.avaliacao60].filter((x) => x != null && x !== "").length;
+  if (camposConhecidos < 2) {
+    const extras = linhasGenericas(p);
+    extras.forEach(([k, valor], i) => { v[`A${90 + i * 2}`] = k; v[`C${90 + i * 2}`] = valor; });
+  }
+  const linhas = distribuirAulas(Array.isArray(p.aulas) ? p.aulas : []);
   const porCelula = Object.fromEntries(linhas.map((l, i) => [PER_DATAS[i], l]));
   for (const [ref, l] of Object.entries(porCelula)) v[ref] = l.data;
   for (const [refCh, refsData] of PER_CH_BLOCOS) {
     const h = refsData.reduce((s, r) => s + (porCelula[r]?.horas || 0), 0);
     if (h) v[refCh] = fmtHoras(h);
   }
-  const conh = p.conhecimentos || [];
+  const conh = Array.isArray(p.conhecimentos) ? p.conhecimentos : [];
   // Se houver mais conhecimentos que blocos, o último bloco recebe o restante.
   PER_CONHEC.forEach((ref, i) => {
     v[ref] = i === PER_CONHEC.length - 1 ? conh.slice(i).join("\n") : conh[i];
@@ -153,6 +181,10 @@ export function gerarEP190(p) {
     C48: p.data, C49: p.responsavel,
   };
   const anexos = { B33: "1 PASSO:", B34: " ", B35: " ", B36: " ", B37: " " };
-  (p.passos || []).slice(0, 25).forEach((t, i) => { anexos[`B${34 + i}`] = t; });
+  const camposConhecidos = [p.segmento, p.uc, p.curso, p.contextualizacao, p.desafio, p.resultados, p.capacidades, p.conhecimentos, p.passos].filter((x) => x != null && x !== "").length;
+  if (camposConhecidos < 2) {
+    linhasGenericas(p).forEach(([k, valor], i) => { anexos[`B${60 + i * 2}`] = `${k}: ${valor}`; });
+  }
+  (Array.isArray(p.passos) ? p.passos : []).slice(0, 25).forEach((t, i) => { anexos[`B${34 + i}`] = t; });
   return preencher("EP-190_MODELO.xlsm", { sheet1: fl1, sheet2: fl2, sheet3: anexos });
 }
