@@ -51,9 +51,9 @@ function secoesDoMaterial(material) {
       const convertidas = secoesDoMaterial(extras);
       return {
         ...secao,
-        paragrafos: [...(Array.isArray(secao?.paragrafos) ? secao.paragrafos : []),
+        paragrafos: [...(Array.isArray(secao?.paragrafos) ? secao.paragrafos.map((x) => String(x ?? "")) : []),
           ...convertidas.flatMap((s) => [s.titulo, ...(s.paragrafos || []), ...(s.itens || []).map((x) => String(x))])],
-        itens: Array.isArray(secao?.itens) ? secao.itens : [],
+        itens: Array.isArray(secao?.itens) ? secao.itens.map((x) => String(x ?? "")) : [],
       };
     });
   }
