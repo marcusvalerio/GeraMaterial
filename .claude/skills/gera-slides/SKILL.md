@@ -21,10 +21,10 @@ O gerador já entrega o estilo aprovado pelo instrutor; use-o como está:
 3. Escreva o **roteiro JSON** do dia seguindo `reference/roteiro.md` (layouts, campos e regras de conteúdo). Veja `exemplos/dia-03-conferencia.json` como referência de qualidade.
 4. Gere o arquivo:
    ```bash
-   npm install pptxgenjs @resvg/resvg-js   # se ainda não estiverem instalados
+   cd .claude/skills/gera-slides && npm install   # só na primeira vez
    node scripts/gerar-slides.cjs roteiro.json "Dia 03 - Conferência.pptx"
    ```
-5. Confira o resultado convertendo para imagem (se houver LibreOffice: `soffice --headless --convert-to pdf`), corrija textos que estourem a caixa e entregue o .pptx.
+5. Salve o roteiro e o .pptx em `slides/<UC>/` na raiz do projeto (não dentro da pasta da Skill). Confira o resultado convertendo para imagem (se houver LibreOffice: `soffice --headless --convert-to pdf`), corrija textos que estourem a caixa e entregue o .pptx.
 
 ## Regras de conteúdo (o que deixa o slide "bem trabalhado")
 - **Uma ideia por slide.** Título é uma frase que afirma ou pergunta, não um rótulo ("Conferir evita estoque fantasma", não "Conferência").
