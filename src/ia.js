@@ -66,9 +66,10 @@ export async function perguntar(system, usuario, opcoes = {}) {
       body: JSON.stringify({
         model: modelos[m],
         temperature: 0.4,
-        stream: true,
-        // Raciocínio curto: o Gemini "pensa" antes de responder e isso pode passar de 5 min (limite da Vercel).
-        ...(nome === "gemini" ? { reasoning_effort: process.env.AI_ESFORCO || "low" } : {}),
+        // A Groq não aceita modo JSON com streaming (devolve vazio); ela responde rápido, então vai sem stream.
+        stream: nome !== "groq",
+        // Raciocínio curto (Gemini e GPT-OSS "pensam" antes e gastam tempo e tokens).
+        ...(nome === "gemini" || /gpt-oss/.test(modelos[m]) ? { reasoning_effort: process.env.AI_ESFORCO || "low" } : {}),
         response_format: { type: "json_object" },
         messages: [{ role: "system", content: system }, { role: "user", content: usuario }],
       }),
@@ -91,6 +92,10 @@ export async function perguntar(system, usuario, opcoes = {}) {
     if (r.status === 503) throw new Error(`A IA (${nome}) está sobrecarregada no momento. Tente novamente em alguns minutos.`);
     throw new Error(`Erro da IA (${nome}): ${erro?.message || JSON.stringify(j).slice(0, 300)}`);
   }
+  if (nome === "groq") {
+    const j2 = await r.json();
+    return j2.choices?.[0]?.message?.content || "";
+  }
   // Lê o stream (Server-Sent Events) e junta os pedaços de texto.
   let texto = "", resto = "";
   const dec = new TextDecoder();
@@ -103,7 +108,9 @@ export async function perguntar(system, usuario, opcoes = {}) {
       if (!l.startsWith("data:")) continue;
       const dado = l.slice(5).trim();
       if (!dado || dado === "[DONE]") continue;
-      try { texto += JSON.parse(dado).choices?.[0]?.delta?.content || ""; } catch { /* linha parcial */ }
+      let ev; try { ev = JSON.parse(dado); } catch { continue; /* linha parcial */ }
+      if (ev.error) throw new Error(`Erro da IA (${nome}): ${ev.error.message || JSON.stringify(ev.error).slice(0, 300)}`);
+      texto += ev.choices?.[0]?.delta?.content || "";
     }
   }
   } catch (e) {
