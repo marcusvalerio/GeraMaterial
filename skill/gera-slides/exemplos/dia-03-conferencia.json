@@ -1,0 +1,54 @@
+{
+  "titulo": "Procedimentos de conferência – parte I",
+  "uc": "Logística de Recebimento e Expedição",
+  "encontro": "Dia 03",
+  "data": "11/11/2026",
+  "instrutor": "Marcus Valério",
+  "slides": [
+    { "layout": "capa", "desenho": "caminhao", "olho": "Recebimento de materiais", "titulo": "A nota fiscal bate com o que chegou?", "subtitulo": "3.1 Conferência entre nota fiscal e material físico recebido" },
+    { "layout": "agenda", "titulo": "Nosso encontro de hoje", "itens": [
+      { "titulo": "Acolhimento e retomada do WMS", "tempo": "20 min", "icone": "computador" },
+      { "titulo": "Por que conferir?", "tempo": "40 min", "icone": "pergunta" },
+      { "titulo": "Como conferir, passo a passo", "tempo": "40 min", "icone": "setas" },
+      { "titulo": "Prática: conferência de lote", "tempo": "100 min", "icone": "caixa" },
+      { "titulo": "Fechamento e feedback", "tempo": "40 min", "icone": "check" } ] },
+    { "layout": "objetivos", "desenho": "alvo", "olho": "Ao final da aula", "titulo": "Você será capaz de…", "itens": [
+      "Comparar a nota fiscal com o material físico recebido",
+      "Verificar quantidade, especificação e embalagem",
+      "Registrar divergências com clareza" ] },
+    { "layout": "pergunta", "desenho": "caixas", "pergunta": "Chegaram 100 caixas, mas a nota diz 120. De quem é o prejuízo?", "dica": "Pense em quem assina o canhoto da nota fiscal.", "notas": "Deixar 3 minutos de discussão. Puxar a responsabilidade de quem recebe e assina." },
+    { "layout": "conceito", "desenho": "lupa", "olho": "Conceito", "titulo": "Conferir é confirmar antes de aceitar", "definicao": "O que chegou fisicamente é exatamente o que foi pedido e faturado?", "pontos": [
+      { "texto": "Quantidade: contagem bate com a nota", "icone": "caixa" },
+      { "texto": "Especificação: código, lote e validade", "icone": "codigo" },
+      { "texto": "Integridade: embalagem sem avarias", "icone": "escudo" },
+      { "texto": "Documento: pedido × nota fiscal", "icone": "documento" } ] },
+    { "layout": "ilustracao", "desenho": "notaFiscal", "olho": "Na prática", "titulo": "Onde olhar na nota fiscal", "marcadores": [
+      { "titulo": "Emitente e número", "texto": "Confirme o fornecedor do pedido", "x": 78, "y": 15 },
+      { "titulo": "Itens e quantidades", "texto": "Compare linha a linha com o físico", "x": 45, "y": 42 },
+      { "titulo": "Valores e impostos", "texto": "Divergência de preço vai ao comprador", "x": 40, "y": 73 },
+      { "titulo": "Canhoto", "texto": "Só assine depois de conferir", "x": 69, "y": 58 } ] },
+    { "layout": "processo", "olho": "Passo a passo", "titulo": "O fluxo da conferência", "passos": [
+      { "titulo": "Recebe a NF", "texto": "Confere com o pedido de compra", "icone": "documento" },
+      { "titulo": "Inspeciona", "texto": "Avarias, lacres e embalagem", "icone": "lupa" },
+      { "titulo": "Conta", "texto": "Contagem cega por item", "icone": "caixa" },
+      { "titulo": "Compara", "texto": "Físico × nota fiscal", "icone": "balanca" },
+      { "titulo": "Registra", "texto": "Aceite ou não-conformidade", "icone": "check" } ] },
+    { "layout": "cards", "olho": "Tipos de divergência", "titulo": "O que você pode encontrar", "itens": [
+      { "titulo": "Falta", "texto": "Quantidade física menor que a faturada.", "icone": "alerta" },
+      { "titulo": "Sobra", "texto": "Chegou mais do que o pedido ou a nota.", "icone": "caixa" },
+      { "titulo": "Avaria", "texto": "Produto ou embalagem danificados.", "icone": "escudo" },
+      { "titulo": "Troca", "texto": "Item, lote ou validade diferentes.", "icone": "setas" } ] },
+    { "layout": "caso", "desenho": "caminhao", "titulo": "Sexta, 17h45, doca 2", "situacao": "O motorista tem pressa: precisa sair até as 18h. A nota fiscal tem 40 caixas de óleo lubrificante; você contou 38, e uma está amassada.", "pergunta": "Você assina o canhoto? O que registra?", "notas": "Resposta esperada: não assinar sem ressalva; anotar falta de 2 e avaria de 1 no canhoto e no relatório; avisar o comprador." },
+    { "layout": "comparacao", "titulo": "Com e sem conferência", "esquerda": { "titulo": "Sem conferência", "itens": ["Estoque fantasma no sistema", "Prejuízo assumido pela empresa", "Cliente reclama na expedição"] }, "direita": { "titulo": "Com conferência", "itens": ["Divergência cobrada do fornecedor", "Estoque confiável no WMS", "Rastreio de lote e validade"] } },
+    { "layout": "quiz", "pergunta": "O que é contagem cega?", "alternativas": [
+      "Contar sem ver a quantidade da nota fiscal", "Contar apenas por amostragem", "Contar no escuro, por segurança", "Deixar o sistema contar sozinho" ], "correta": 0, "explicacao": "Quem conta não vê a quantidade esperada, evitando 'confirmar' o número da nota." },
+    { "layout": "atividade", "olho": "Mão na massa", "titulo": "Conferência de lote", "passos": [ "Receba a nota fiscal e o lote do seu posto", "Faça a contagem cega de cada item", "Compare com a nota e marque as divergências", "Preencha o relatório de conferência" ], "formato": "Individual", "tempo": "100 min", "entrega": "Relatório de conferência com não-conformidades" },
+    { "layout": "avaliacao", "titulo": "Como você será avaliado", "criterios": [
+      { "criterio": "Conferência completa", "evidencia": "Todos os itens do lote conferidos", "tipo": "Crítico" },
+      { "criterio": "Divergências corretas", "evidencia": "Faltas, sobras e avarias apontadas", "tipo": "Crítico" },
+      { "criterio": "Registro claro", "evidencia": "Relatório legível e com quantidades", "tipo": "Desejável" } ] },
+    { "layout": "destaque", "desenho": "checklist", "frase": "Assinou o canhoto sem conferir, aceitou o problema." },
+    { "layout": "resumo", "titulo": "Para levar", "itens": [ "Conferir antes de aceitar a carga", "Contagem cega evita viés", "Toda divergência vira registro", "Estoque confiável começa no recebimento" ] },
+    { "layout": "encerramento", "desenho": "trofeu", "titulo": "Até o próximo encontro!", "proxima": "Dia 04 · Contagem física", "tarefa": "Traga dúvidas sobre o relatório de conferência." }
+  ]
+}
