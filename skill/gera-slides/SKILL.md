@@ -13,7 +13,7 @@ O Plano de Aula (PDF ou Word do GeraMaterial) é a **base** dos slides. Cada "Di
 3. Escreva o **roteiro JSON** do dia seguindo `reference/roteiro.md` (layouts, campos e regras de conteúdo). Veja `exemplos/dia-03-conferencia.json` como referência de qualidade.
 4. Gere o arquivo:
    ```bash
-   npm install pptxgenjs   # se ainda não estiver instalado
+   npm install pptxgenjs @resvg/resvg-js   # se ainda não estiverem instalados
    node scripts/gerar-slides.cjs roteiro.json "Dia 03 - Conferência.pptx"
    ```
 5. Confira o resultado convertendo para imagem (se houver LibreOffice: `soffice --headless --convert-to pdf`), corrija textos que estourem a caixa e entregue o .pptx.
@@ -24,10 +24,12 @@ O Plano de Aula (PDF ou Word do GeraMaterial) é a **base** dos slides. Cada "Di
 - **Varie os layouts:** nunca dois iguais seguidos; alterne claro/escuro (`pergunta`, `destaque` quebram o ritmo).
 - **Siga a MSEP e o plano:** os conhecimentos com a numeração do plano, a estratégia do dia (estudo de caso, situação-problema, simulação…) e a atividade exatamente como no plano, com o produto entregue e o instrumento de avaliação.
 - **Contexto real da profissão:** exemplos e perguntas do dia a dia do trabalhador (ex.: canhoto da NF, WMS, cross-dock), nunca genéricos.
+- **Desenhe:** use `desenho` em capa, pergunta, objetivos, caso, ilustração e encerramento, e `icone` em cards/passos/agenda. Escolha o desenho que conversa com o assunto (caminhão no recebimento, notaFiscal na conferência, seguranca em EPI…). Não repita o mesmo desenho em slides seguidos.
+- **Interação:** todo encontro tem pelo menos um `caso` (situação real) e um `quiz`. Quando houver documento ou equipamento, use `ilustracao` com marcadores.
 - **Não invente dados:** números no layout `dados` só com fonte conhecida; se não tiver, use outro layout.
 
-## Estrutura padrão de um encontro (10–14 slides)
+## Estrutura padrão de um encontro (14–18 slides)
 `capa` → `agenda` (da organização das 4 horas) → `objetivos` (do objetivo do dia) → `pergunta` (problematização) →
-2–4 slides de conteúdo (`conceito`, `processo`, `cards`, `comparacao`, `dados`, `destaque`) →
+4–6 slides de conteúdo (`conceito`, `ilustracao`, `processo`, `cards`, `comparacao`, `dados`, `destaque`) com um `caso` e um `quiz` no meio →
 `atividade` (do plano) → `avaliacao` (critérios críticos/desejáveis) → `resumo` → `encerramento` (próximo encontro).
 Em dia de prova ou apresentação, troque o conteúdo por orientações da avaliação.
