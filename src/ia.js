@@ -1,5 +1,5 @@
 // Escolhe o provedor de IA pela chave configurada no .env.
-// Gratuitos: GEMINI_API_KEY (Google AI Studio), GROQ_API_KEY (Llama), OPENROUTER_API_KEY (modelos ":free").
+// Gratuitos: GEMINI_API_KEY (Google AI Studio), GROQ_API_KEY (GPT-OSS/Llama), OPENROUTER_API_KEY (modelos ":free").
 // Pago: ANTHROPIC_API_KEY (Claude).
 // Os gratuitos usam a API compatível com OpenAI, então uma única chamada atende todos.
 import Anthropic from "@anthropic-ai/sdk";
@@ -11,7 +11,9 @@ const PROVEDORES = {
     reservas: ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.5-flash-lite",
       "gemini-3.1-flash-lite", "gemini-flash-lite-latest"] },
   groq: { chave: "GROQ_API_KEY", url: "https://api.groq.com/openai/v1/chat/completions",
-    modelo: "llama-3.3-70b-versatile" },
+    // O Llama 3.3 70B saiu do plano gratuito; se um modelo sumir (404), passa para o próximo.
+    modelo: "openai/gpt-oss-120b",
+    reservas: ["openai/gpt-oss-20b", "meta-llama/llama-4-scout-17b-16e-instruct", "qwen/qwen3-32b"] },
   openrouter: { chave: "OPENROUTER_API_KEY", url: "https://openrouter.ai/api/v1/chat/completions",
     modelo: "deepseek/deepseek-chat-v3-0324:free" },
 };
