@@ -1,0 +1,41 @@
+{
+  "titulo": "Procedimentos de conferência – parte I",
+  "uc": "Logística de Recebimento e Expedição",
+  "encontro": "Dia 03",
+  "data": "11/11/2026",
+  "instrutor": "Marcus Valério",
+  "slides": [
+    { "layout": "capa", "olho": "Logística de Recebimento e Expedição", "titulo": "Conferência: a nota fiscal bate com o que chegou?", "subtitulo": "3.1 Conferência entre nota fiscal e material físico recebido" },
+    { "layout": "agenda", "titulo": "Nosso encontro de hoje", "itens": [
+      { "titulo": "Acolhimento e retomada do WMS", "tempo": "20 min" },
+      { "titulo": "Por que conferir?", "tempo": "40 min" },
+      { "titulo": "Como conferir, passo a passo", "tempo": "40 min" },
+      { "titulo": "Prática: conferência de lote", "tempo": "100 min" },
+      { "titulo": "Fechamento e feedback", "tempo": "40 min" } ] },
+    { "layout": "objetivos", "olho": "Ao final da aula", "titulo": "Você será capaz de…", "itens": [
+      "Comparar a nota fiscal com o material físico recebido",
+      "Verificar quantidade, especificação e estado da embalagem",
+      "Registrar divergências e não-conformidades com clareza" ] },
+    { "layout": "pergunta", "pergunta": "Se o caminhão trouxe 100 caixas e a nota diz 120, de quem é o prejuízo?", "dica": "Pense em quem assina o canhoto da nota fiscal.", "notas": "Deixar 3 minutos de discussão. Puxar o tema da responsabilidade de quem recebe." },
+    { "layout": "conceito", "olho": "Conceito", "titulo": "O que é conferência no recebimento", "definicao": "Conferir é confirmar que o que chegou fisicamente é exatamente o que foi pedido e faturado — antes de aceitar a carga.", "pontos": [ "Quantidade: contagem bate com a nota", "Especificação: código, lote, validade", "Integridade: embalagem sem avarias", "Documento: pedido × nota fiscal" ] },
+    { "layout": "processo", "olho": "Passo a passo", "titulo": "Fluxo da conferência", "passos": [
+      { "titulo": "Recebe a NF", "texto": "Confere dados do pedido de compra" },
+      { "titulo": "Inspeciona", "texto": "Avarias, lacres e embalagem" },
+      { "titulo": "Conta", "texto": "Contagem cega por item" },
+      { "titulo": "Compara", "texto": "Físico × nota fiscal" },
+      { "titulo": "Registra", "texto": "Aceite ou não-conformidade" } ] },
+    { "layout": "comparacao", "titulo": "Conferência bem feita × mal feita", "esquerda": { "titulo": "Sem conferência", "itens": ["Estoque fantasma no sistema", "Prejuízo assumido pela empresa", "Reclamação do cliente na expedição"] }, "direita": { "titulo": "Com conferência", "itens": ["Divergência resolvida com o fornecedor", "Estoque confiável no WMS", "Rastreabilidade de lote e validade"] } },
+    { "layout": "cards", "olho": "Tipos de divergência", "titulo": "O que você pode encontrar", "itens": [
+      { "titulo": "Falta", "texto": "Quantidade física menor que a faturada." },
+      { "titulo": "Sobra", "texto": "Chegou mais do que o pedido ou a nota." },
+      { "titulo": "Avaria", "texto": "Produto ou embalagem danificados." },
+      { "titulo": "Troca", "texto": "Item, lote ou validade diferentes." } ] },
+    { "layout": "atividade", "olho": "Mão na massa", "titulo": "Conferência de lote", "passos": [ "Receba a nota fiscal e o lote do seu posto", "Faça a contagem cega de cada item", "Compare com a nota e marque as divergências", "Preencha o relatório de conferência" ], "formato": "Individual", "tempo": "100 min", "entrega": "Relatório de conferência com não-conformidades" },
+    { "layout": "avaliacao", "titulo": "Como você será avaliado", "criterios": [
+      { "criterio": "Conferência completa", "evidencia": "Todos os itens do lote conferidos", "tipo": "Crítico" },
+      { "criterio": "Divergências corretas", "evidencia": "Faltas, sobras e avarias apontadas", "tipo": "Crítico" },
+      { "criterio": "Registro claro", "evidencia": "Relatório legível e com quantidades", "tipo": "Desejável" } ] },
+    { "layout": "resumo", "titulo": "Para levar", "itens": [ "Conferir antes de aceitar a carga", "Contagem cega evita viés", "Toda divergência vira registro", "Estoque confiável começa no recebimento" ] },
+    { "layout": "encerramento", "titulo": "Até o próximo encontro!", "proxima": "Dia 04 · Contagem física", "tarefa": "Traga dúvidas sobre o relatório de conferência." }
+  ]
+}
