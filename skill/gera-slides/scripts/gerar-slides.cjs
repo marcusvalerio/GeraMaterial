@@ -47,14 +47,12 @@ function icone(s, nome, x, y, tam, cor = T.branco) {
 const sombra = () => ({ type: "outer", blur: 10, offset: 3, angle: 90, color: "1E293B", opacity: 0.1 });
 const txt = (s, texto, o) => s.addText(texto, { fontFace: T.fonte, color: T.tinta, margin: 0, valign: "top", ...o });
 const lista = (v) => (Array.isArray(v) ? v : v ? [v] : []);
-const fundos = {};
 let numero = 0;
 
 function base(s, { escuro = false } = {}) {
   numero++;
-  const chave = `${escuro}-${numero % 3}`;
-  fundos[chave] ??= png(D.fundoSvg(T, escuro, numero), 1600);
-  s.background = { data: fundos[chave] };
+  // Fundo em cor sólida (sem degradê).
+  s.background = { color: escuro ? T.escuro : T.fundo };
   const cor = escuro ? "94A3B8" : T.suave;
   txt(s, `${R.uc || ""}${R.encontro ? `  ·  ${R.encontro}` : ""}`, { x: M, y: H - 0.48, w: 9, h: 0.3, fontSize: 10, color: cor });
   txt(s, String(numero), { x: W - M - 1, y: H - 0.48, w: 1, h: 0.3, fontSize: 10, color: cor, align: "right" });

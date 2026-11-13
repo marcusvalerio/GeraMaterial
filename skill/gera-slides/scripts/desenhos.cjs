@@ -19,8 +19,8 @@ const ILUSTRACOES = {
   caminhao: (c) => `${chao(c)}
     <rect x="40" y="110" width="210" height="120" rx="10" fill="${c.cor}"/>
     <rect x="40" y="110" width="210" height="22" rx="10" fill="#fff" opacity=".18"/>
-    <path d="M250 150 h60 l40 40 v40 h-100z" fill="${c.escuro}"/>
-    <path d="M262 160 h44 l28 28 h-72z" fill="${c.cor2}" opacity=".85"/>
+    <path d="M250 150 h60 l40 40 v40 h-100z" fill="${c.cor2}"/>
+    <path d="M262 160 h44 l28 28 h-72z" fill="#fff" opacity=".85"/>
     <circle cx="100" cy="236" r="24" fill="${c.escuro}"/><circle cx="100" cy="236" r="10" fill="${c.claro}"/>
     <circle cx="300" cy="236" r="24" fill="${c.escuro}"/><circle cx="300" cy="236" r="10" fill="${c.claro}"/>
     ${caixa(c, 70, 70, 50, 40)}${caixa(c, 130, 80, 40, 30, c.ok)}`,
@@ -155,15 +155,4 @@ function iconeSvg(nome, cor, tamanho = 128) {
   if (!p) return null;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${tamanho}" height="${tamanho}" fill="none" stroke="${hex(cor)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 }
-// Fundo com gradiente suave e formas (para slides claros e escuros).
-function fundoSvg(T, escuro, semente = 0) {
-  const c = paleta(T), a = semente % 3;
-  const base = escuro ? `<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c.escuro}"/><stop offset="1" stop-color="${c.cor}" stop-opacity=".55"/></linearGradient>`
-    : `<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="${hex(T.fundo)}"/></linearGradient>`;
-  const formas = escuro
-    ? `<circle cx="${[1200, 1150, 1250][a]}" cy="${[120, 650, 380][a]}" r="380" fill="${c.cor}" opacity=".35"/><circle cx="${[1050, 1250, 150][a]}" cy="${[700, 100, 720][a]}" r="240" fill="${c.cor2}" opacity=".25"/>`
-    : `<circle cx="${[1290, 1300, 1280][a]}" cy="${[60, 700, 40][a]}" r="${[220, 180, 160][a]}" fill="${c.cor}" opacity=".06"/><circle cx="${[1180, 40, 60][a]}" cy="${[740, 720, 760][a]}" r="140" fill="${c.destaque}" opacity=".07"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1333 750" width="1600" height="900"><defs>${base}</defs><rect width="1333" height="750" fill="url(#g)"/>${formas}</svg>`;
-}
-
-module.exports = { ilustracaoSvg, iconeSvg, fundoSvg, ILUSTRACOES: Object.keys(ILUSTRACOES), ICONES: Object.keys(ICONES) };
+module.exports = { ilustracaoSvg, iconeSvg, ILUSTRACOES: Object.keys(ILUSTRACOES), ICONES: Object.keys(ICONES) };
