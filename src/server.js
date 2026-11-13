@@ -79,14 +79,34 @@ function camposVazios(etapaId, r) {
   return (OBRIGATORIOS[etapaId] || []).filter((c) => !temConteudo(c.split(".").reduce((o, k) => o?.[k], r)));
 }
 
+// O plano de curso traz todas as UCs; a IA só precisa da parte da UC escolhida.
+// Planos gratuitos de IA limitam o tamanho do pedido (ex.: Groq, 8 mil tokens por minuto).
+const LIMITE_REFERENCIA = Number(process.env.AI_LIMITE_REFERENCIA) || 9000;
+const semAcento = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+function trechoDaUc(texto, uc) {
+  if (!texto || texto.length <= LIMITE_REFERENCIA) return texto || "";
+  const base = semAcento(texto), nome = semAcento(String(uc || "").trim());
+  // Entre as ocorrências do nome da UC, usa a que tem "capacidades" mais perto (o detalhamento, não o índice).
+  let melhor = -1, dist = Infinity;
+  for (let i = nome ? base.indexOf(nome) : -1; i >= 0; i = base.indexOf(nome, i + 1)) {
+    const c = base.indexOf("capacidade", i);
+    if (c >= 0 && c - i < dist) { dist = c - i; melhor = i; }
+  }
+  if (melhor < 0) return texto.slice(0, LIMITE_REFERENCIA);
+  // Termina na próxima "unidade curricular" (início da UC seguinte), sem passar do limite.
+  const prox = base.indexOf("unidade curricular", melhor + nome.length + 200);
+  const fim = Math.min(prox > 0 ? prox : texto.length, melhor + LIMITE_REFERENCIA);
+  return `DOCUMENTO DE REFERÊNCIA (trecho da UC ${uc}):\n${texto.slice(melhor, fim)}`;
+}
+
 // Gera uma etapa da sequência. Recebe os dados, os documentos de referência e
 // o resultado das etapas anteriores (para manter tudo coerente).
 async function executarEtapa(etapaId, dados, anteriores, referencia) {
   const etapa = ETAPAS[etapaId];
-  // Ao refazer, ignora o resultado antigo desta mesma etapa.
-  const ctxAnteriores = ORDEM.filter((k) => k !== etapaId && anteriores[k])
+  // Só as etapas ANTERIORES a esta (ao refazer, ignora a própria e as seguintes).
+  const ctxAnteriores = ORDEM.slice(0, ORDEM.indexOf(etapaId)).filter((k) => anteriores[k])
     .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
-  const usuario = `${referencia}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
+  const usuario = `${trechoDaUc(referencia, dados.uc)}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
   // A IA às vezes devolve o modelo com os campos de conteúdo vazios (só o cabeçalho preenchido),
   // o que gerava planilhas em branco. Confere e pede de novo; se continuar vazio, avisa em vez de salvar.
   let resultado, faltando = [];
