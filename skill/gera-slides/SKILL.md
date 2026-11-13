@@ -7,6 +7,14 @@ description: Gera slides .pptx bem acabados (visual moderno, estilo "Lovable") p
 
 O Plano de Aula (PDF ou Word do GeraMaterial) é a **base** dos slides. Cada "Dia NN" do plano vira **uma apresentação**.
 
+## Estilo visual (padrão aprovado — não mude)
+O gerador já entrega o estilo aprovado pelo instrutor; use-o como está:
+- **Fundos em cor sólida, sem degradê:** cinza-azulado claro (`EEF2F8`) nos slides de conteúdo; azul-marinho (`14213D`) em capa, pergunta, destaque e encerramento.
+- Paleta: azul `2563EB`, azul-claro `0EA5E9`, âmbar `F59E0B`, verde `10B981`, vermelho `EF4444`; fonte Inter.
+- Cartões brancos com cantos arredondados e sombra suave, ícones em quadrados coloridos, desenhos flat próprios.
+- **Não passe `tema`** no roteiro e não acrescente degradês, imagens externas ou outros fundos, a menos que o instrutor peça.
+- O resultado deve ficar igual a `exemplos/Dia 03 - Conferência.pptx` (referência visual e de conteúdo).
+
 ## Fluxo
 1. Leia o Plano de Aula inteiro. Identifique: UC, curso, instrutor, e para cada dia: título, data, conhecimentos, objetivo, estratégia MSEP, atividade e avaliação. Leia também a "Organização das quatro horas" (vira a agenda).
 2. Pergunte (se o instrutor não disse) **qual dia** gerar. "Todos" = uma apresentação por dia, gerando um de cada vez.

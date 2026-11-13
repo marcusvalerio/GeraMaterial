@@ -7,7 +7,7 @@
   "slides": [ { "layout": "capa", "...": "..." } ]
 }
 ```
-`tema` é opcional (cores hex sem `#`; também `cor2`, `fundo`, `fonte`). Todo slide aceita `"notas"`: texto do instrutor no modo apresentador.
+`tema` é opcional e só deve ser usado se o instrutor pedir outras cores (cores hex sem `#`; também `cor2`, `fundo`, `fonte`). Todo slide aceita `"notas"`: texto do instrutor no modo apresentador.
 
 | layout | campos | uso |
 |---|---|---|
