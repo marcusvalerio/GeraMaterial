@@ -7,24 +7,24 @@ const ETAPAS = [
     downloads: (r) => [["Baixar PER", "per", r, "PER"]] },
   { id: "plano", nome: "Plano de Aula", formato: "Word e PDF",
     // Materiais antigos: o Plano de Aula era o próprio EP-190.
-    downloads: (r) => r.secoes ? [["Plano de Aula · Word", "docx", r, "Plano de Aula"], ["PDF", "pdf", r, "Plano de Aula", true]]
+    downloads: (r) => (r.secoes || r.aulas) ? [["Plano de Aula · Word", "docx", r, "Plano de Aula"], ["PDF", "pdf", r, "Plano de Aula", true]]
       : [["Baixar EP-190", "ep190", r, "EP-190"]] },
   { id: "avaliacao", nome: "Avaliações 30 e 60 pontos", formato: "Word e PDF",
     downloads: (r, it) => {
       const cab = (pts) => cabecalhoProva(it, pts);
       const a30 = { ...r.avaliacao30, cabecalho: cab(30) }, a60 = { ...r.avaliacao60, cabecalho: cab(60) };
       return [
-        ["Avaliação 30 · Word", "docx", a30, "Avaliacao 30 pontos"],
-        ["Avaliação 60 · Word", "docx", a60, "Avaliacao 60 pontos"],
-        ["30 · PDF", "pdf", a30, "Avaliacao 30 pontos", true],
-        ["60 · PDF", "pdf", a60, "Avaliacao 60 pontos", true],
+        ["Avaliação 30 · Word", "docx", a30, "Avaliação 30 pontos"],
+        ["Avaliação 60 · Word", "docx", a60, "Avaliação 60 pontos"],
+        ["30 · PDF", "pdf", a30, "Avaliação 30 pontos", true],
+        ["60 · PDF", "pdf", a60, "Avaliação 60 pontos", true],
       ];
     } },
   { id: "atividade", nome: "Atividade do educador (EP-190)", formato: "Excel e Word",
     downloads: (r) => [
       ...(r.ep190 ? [["Baixar EP-190", "ep190", r.ep190, "EP-190"]] : []),
-      ["Teórica · Word", "docx", r.teorica, "Atividade teorica"],
-      ["Prática · Word", "docx", r.pratica, "Atividade pratica"],
+      ["Teórica · Word", "docx", r.teorica, "Atividade teórica"],
+      ["Prática · Word", "docx", r.pratica, "Atividade prática"],
     ] },
 ];
 
@@ -73,7 +73,9 @@ function render() {
     if (it.resultados[et.id] && st.tipo === "ok") {
       const acoes = document.createElement("div");
       acoes.className = "acoes";
-      const sufixo = it.uc ? ` - ${nomeArquivo(it.uc.nome)}` : "";
+      // Nome do arquivo: "Documento - Nome da UC" (UC do plano de curso, do formulário ou do material salvo).
+      const nomeUc = nomeArquivo(it.uc?.nome || it.dados?.uc || it.resultados?.per?.uc || it.resultados?.plano?.uc || "");
+      const sufixo = nomeUc ? ` - ${nomeUc}` : "";
       const ver = document.createElement("button");
       ver.type = "button";
       ver.textContent = "Ver prévia";
@@ -340,7 +342,7 @@ async function baixarCronograma() {
       aulas: u.aulas.map((a) => ({ data: dataBr(a.data), dia: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][a.data.getDay()], ch: a.ch })) })),
     meses: crono.meses, pulados: crono.pulados.map((p) => ({ data: dataBr(p.data), motivo: p.motivo })),
   };
-  await baixar("cronograma", corpo, `Calendario - ${nomeArquivo(analise.curso)}`);
+  await baixar("cronograma", corpo, `Calendário - ${nomeArquivo(analise.curso)}`);
 }
 
 async function salvarTurma() {
@@ -706,6 +708,22 @@ function textosDe(v, fora = new Set(["layout", "icone", "titulo", "olho", "desta
   return Object.entries(v).filter(([k]) => !fora.has(k)).flatMap(([k, x]) => (k === "titulo" ? [] : textosDe(x, new Set(["layout", "icone"]))));
 }
 
+// Prévia do Plano de Aula no mesmo formato do Word/PDF.
+function htmlPlano(p) {
+  const t = (v) => esc(Array.isArray(v) ? v.join("; ") : v ?? "");
+  const ident = [["Curso", p.curso], ["Carga horária", p.cargaHoraria], ["Organização", p.organizacao], ["Instrutor(a)", p.instrutor], ["Referência", p.referencia]]
+    .filter(([, v]) => v).map(([r, v]) => `<p><strong>${r}:</strong> ${t(v)}</p>`).join("");
+  const dist = (p.distribuicao || []).length ? `<h4>Distribuição da carga horária</h4>${htmlTabela(["Grupos de conhecimentos", "CH"], p.distribuicao.map((d) => [d.grupo, d.ch]))}${p.observacaoCargaHoraria ? `<p>${t(p.observacaoCargaHoraria)}</p>` : ""}` : "";
+  const aulas = (p.aulas || []).map((a, i) => `<h4>Dia ${a.dia || i + 1} · ${t(a.titulo)}${a.data ? ` · ${t(a.data)}` : ""}</h4>
+    ${[["Conhecimentos", a.conhecimentos], ["Objetivo", a.objetivo], ["Estratégia MSEP", a.estrategia], ["Atividade", a.atividade], ["Avaliação", a.avaliacao]]
+      .filter(([, v]) => v).map(([r, v]) => `<p><strong>${r}:</strong> ${t(v)}</p>`).join("")}`).join("");
+  const org = (p.organizacaoDiaria || []).length ? `<h4>Organização das quatro horas</h4>${htmlTabela(["Etapa", "Tempo", "Desenvolvimento"], p.organizacaoDiaria.map((o) => [o.etapa, o.tempo, o.desenvolvimento]))}` : "";
+  const inst = (p.instrumentos || []).length ? `<h4>Instrumentos de avaliação</h4><ul>${p.instrumentos.map((x) => `<li>${typeof x === "string" ? t(x) : `<strong>${t(x.tipo)}:</strong> ${t(x.descricao)}`}</li>`).join("")}</ul>` : "";
+  const fim = [["Recursos didáticos", p.recursos], ["Segurança", p.observacaoRecursos], ["Resultado esperado", p.resultadoEsperado], ["Observação pedagógica", p.observacaoPedagogica]]
+    .filter(([, v]) => v).map(([r, v]) => `<h4>${r}</h4><p>${t(v)}</p>`).join("");
+  return `<h3>Plano de Aula${p.uc ? ` · ${t(p.uc)}` : ""}</h3>${ident}${p.objetivoGeral ? `<h4>Objetivo geral</h4><p>${t(p.objetivoGeral)}</p>` : ""}${dist}<h4>Plano detalhado</h4>${aulas}${org}${inst}${fim}`;
+}
+
 function htmlGenerico(o) {
   return Object.entries(o || {}).map(([k, v]) => {
     if (v == null || v === "") return "";
@@ -723,6 +741,7 @@ function abrirPrevia(et, r) {
   let html;
   if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60);
   else if (et.id === "atividade") html = (r.ep190 ? `<h3>EP-190</h3>${htmlGenerico(r.ep190)}` : "") + htmlDoc(r.teorica) + htmlDoc(r.pratica);
+  else if (et.id === "plano" && r.aulas) html = htmlPlano(r);
   else if (et.id === "plano" && r.secoes) html = htmlDoc(r);
   else html = htmlGenerico(r);
   $("#previaTitulo").textContent = et.nome;

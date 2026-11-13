@@ -3,6 +3,7 @@ import {
   Document, Packer, Paragraph, HeadingLevel, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle,
 } from "docx";
 import PDFDocument from "pdfkit";
+import { ehPlanoAula, gerarPlanoDocx, gerarPlanoPdf } from "./planoAula.js";
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,6 +39,7 @@ function cabecalhoDocx(c) {
 }
 
 export async function gerarDocx(m) {
+  if (ehPlanoAula(m)) return gerarPlanoDocx(m);
   const filhos = [...(m.cabecalho ? cabecalhoDocx(m.cabecalho) : []), new Paragraph({ text: m.titulo, heading: HeadingLevel.TITLE })];
   for (const s of m.secoes || []) {
     filhos.push(new Paragraph({ text: s.titulo, heading: HeadingLevel.HEADING_1 }));
@@ -70,6 +72,7 @@ export async function gerarDocx(m) {
 }
 
 export function gerarPdf(m) {
+  if (ehPlanoAula(m)) return gerarPlanoPdf(m);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 50, size: "A4" });
     const partes = [];
