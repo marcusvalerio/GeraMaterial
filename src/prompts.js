@@ -1,4 +1,4 @@
-// Sequência de entregas: PER, Plano de Aula (Word/PDF), Avaliações e Atividade do educador (EP-190 + Word).
+// Sequência de entregas: PER, Plano de Aula (EP-190), Avaliações e Atividades do educador.
 // Base: MSEP + documento de referência enviado pelo instrutor.
 
 export const SISTEMA = `Você é um especialista pedagógico do SENAI, com domínio da Metodologia SENAI de Educação Profissional (MSEP):
@@ -29,11 +29,16 @@ export const ETAPAS = {
   "instrutor": "" }`,
   },
   plano: {
-    nome: "Plano de Aula",
-    instrucao: `Com base no PER, elabore o PLANO DE AULA da Unidade Curricular, aula a aula, coerente com as datas e a carga horária do PER.
-Inclua: identificação (curso, UC, carga horária, instrutor), capacidades e conhecimentos trabalhados, e para cada aula
-(tabela Aula | Data | Conhecimentos | Estratégias/atividades | Recursos | Avaliação), seguido de critérios de avaliação e referências.
-JSON: ${DOC_GENERICO}`,
+    nome: "Plano de Aula (EP-190 – Situação de Aprendizagem)",
+    instrucao: `Com base no PER, elabore o Plano da Situação de Aprendizagem (formulário EP-190). JSON:
+{ "segmento": "", "uc": "NOME DA UC + CH", "curso": "", "instrutor": "", "numero": "1",
+  "estrategia": "Situação-problema" | "Estudo de Caso" | "Projeto" | "Pesquisa Aplicada",
+  "contextualizacaoTitulo": "data (tema)", "contextualizacao": "texto do cenário",
+  "desafio": ["..."], "resultados": ["..."], "capacidades": ["..."], "conhecimentos": ["..."],
+  "criterio": "Qualitativo e Quantitativo", "critico": true, "desejavel": true,
+  "materialConsumo": "", "ferramentas": "", "epis": "", "epcs": "", "equipamentos": "", "instrumentos": "",
+  "bibliografia": ["..."], "data": "dd/mm/aaaa", "responsavel": "",
+  "passos": ["etapas de desenvolvimento da atividade, para a aba Anexos"] }`,
   },
   avaliacao: {
     nome: "Avaliações (30 e 60 pontos)",
@@ -49,19 +54,10 @@ Em todas: a soma das pontuações fecha exatamente 30 e 60, e há matriz de corr
 JSON: { "avaliacao30": ${DOC_GENERICO}, "avaliacao60": ${DOC_GENERICO} }`,
   },
   atividade: {
-    nome: "Atividade do educador (EP-190, teórica e prática)",
-    instrucao: `Com base no PER e no Plano de Aula, elabore a ATIVIDADE DO EDUCADOR: o Plano da Situação de Aprendizagem
-(formulário EP-190) e duas atividades para o educador aplicar, uma TEÓRICA e uma PRÁTICA (cada uma com objetivo, capacidades,
-orientações, passo a passo, tempo, recursos, critérios de avaliação e resposta esperada). JSON:
-{ "ep190": { "segmento": "", "uc": "NOME DA UC + CH", "curso": "", "instrutor": "", "numero": "1",
-    "estrategia": "Situação-problema" | "Estudo de Caso" | "Projeto" | "Pesquisa Aplicada",
-    "contextualizacaoTitulo": "data (tema)", "contextualizacao": "texto do cenário",
-    "desafio": ["..."], "resultados": ["..."], "capacidades": ["..."], "conhecimentos": ["..."],
-    "criterio": "Qualitativo e Quantitativo", "critico": true, "desejavel": true,
-    "materialConsumo": "", "ferramentas": "", "epis": "", "epcs": "", "equipamentos": "", "instrumentos": "",
-    "bibliografia": ["..."], "data": "dd/mm/aaaa", "responsavel": "",
-    "passos": ["etapas de desenvolvimento da atividade, para a aba Anexos"] },
-  "teorica": ${DOC_GENERICO}, "pratica": ${DOC_GENERICO} }`,
+    nome: "Atividade do educador (teórica e prática)",
+    instrucao: `Com base no Plano de Aula, elabore duas atividades para o educador aplicar: uma TEÓRICA e uma PRÁTICA.
+Cada uma com objetivo, capacidades, orientações, passo a passo, tempo, recursos, critérios de avaliação e resposta esperada.
+JSON: { "teorica": ${DOC_GENERICO}, "pratica": ${DOC_GENERICO} }`,
   },
 };
 
