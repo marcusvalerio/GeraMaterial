@@ -26,13 +26,6 @@ app.use(carregarUsuario);
 app.get("/", (_req, res) => res.redirect("/inicio.html"));
 app.use(express.static(path.join(raiz, "..", "public")));
 
-function extrairJson(texto) {
-  const ini = texto.indexOf("{");
-  const fim = texto.lastIndexOf("}");
-  if (ini < 0 || fim < 0) throw new Error("A IA não retornou um JSON válido.");
-  return JSON.parse(texto.slice(ini, fim + 1));
-}
-
 // Extrai o texto dos documentos de referência (PDF, Word ou TXT).
 async function textoReferencias(arquivos) {
   const partes = [];

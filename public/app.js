@@ -724,8 +724,6 @@ function abrirPrevia(et, r) {
   if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60);
   else if (et.id === "atividade") html = (r.ep190 ? `<h3>EP-190</h3>${htmlGenerico(r.ep190)}` : "") + htmlDoc(r.teorica) + htmlDoc(r.pratica);
   else if (et.id === "plano" && r.secoes) html = htmlDoc(r);
-  else if (et.id === "slides") html = (r.slides || []).map((sl, i) => `<div class="previa-slide"><small>${i + 1}${sl.olho ? ` · ${esc(sl.olho)}` : ""}</small>
-      <strong>${esc(sl.titulo || "")}</strong>${textosDe(sl).slice(0, 8).map((t) => `<p>${esc(t)}</p>`).join("")}</div>`).join("");
   else html = htmlGenerico(r);
   $("#previaTitulo").textContent = et.nome;
   $("#previaCorpo").innerHTML = html || "<p>Sem conteúdo para mostrar.</p>";
