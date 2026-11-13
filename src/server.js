@@ -90,7 +90,8 @@ function camposVazios(etapaId, r) {
 // o resultado das etapas anteriores (para manter tudo coerente).
 async function executarEtapa(etapaId, dados, anteriores, referencia) {
   const etapa = ETAPAS[etapaId];
-  const ctxAnteriores = ORDEM.filter((k) => anteriores[k])
+  // Ao refazer, ignora o resultado antigo desta mesma etapa.
+  const ctxAnteriores = ORDEM.filter((k) => k !== etapaId && anteriores[k])
     .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
   const usuario = `${referencia}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
   // A IA às vezes devolve o modelo com os campos de conteúdo vazios (só o cabeçalho preenchido),

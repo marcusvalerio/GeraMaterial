@@ -88,6 +88,17 @@ function render() {
         b.onclick = () => baixar(fmt, dados, nome + sufixo);
         acoes.append(b);
       }
+      // Refaz só esta etapa (as outras prontas ficam como estão).
+      if (it.dados && !gerando) {
+        const r = document.createElement("button");
+        r.type = "button";
+        r.textContent = "Refazer";
+        r.className = "alt btn-refazer";
+        r.onclick = () => {
+          if (confirm(`Gerar de novo "${et.nome}"? O material atual desta etapa será substituído.`)) gerarFila(atual, i, true);
+        };
+        acoes.append(r);
+      }
       corpo.append(acoes);
     }
     if (st.tipo === "erro" && !gerando) {
