@@ -72,6 +72,20 @@ app.post("/api/analisar", exigeLogin, upload.array("referencias"), async (req, r
   }
 });
 
+// Campos de conteúdo que não podem vir vazios em cada etapa.
+const OBRIGATORIOS = {
+  per: ["capacidadesTecnicas", "conhecimentos", "estrategias", "criterios"],
+  plano: ["contextualizacao", "desafio", "resultados", "capacidades", "conhecimentos", "passos"],
+  avaliacao: ["avaliacao30.secoes", "avaliacao60.secoes"],
+  atividade: ["teorica.secoes", "pratica.secoes"],
+};
+const temConteudo = (v) => Array.isArray(v) ? v.some(temConteudo)
+  : v && typeof v === "object" ? Object.values(v).some(temConteudo)
+  : String(v ?? "").replace(/\.{3}|…/g, "").trim() !== "";
+function camposVazios(etapaId, r) {
+  return (OBRIGATORIOS[etapaId] || []).filter((c) => !temConteudo(c.split(".").reduce((o, k) => o?.[k], r)));
+}
+
 // Gera uma etapa da sequência. Recebe os dados, os documentos de referência e
 // o resultado das etapas anteriores (para manter tudo coerente).
 async function executarEtapa(etapaId, dados, anteriores, referencia) {
@@ -79,7 +93,18 @@ async function executarEtapa(etapaId, dados, anteriores, referencia) {
   const ctxAnteriores = ORDEM.filter((k) => anteriores[k])
     .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
   const usuario = `${referencia}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
-  const resultado = await perguntarJson(SISTEMA, usuario);
+  // A IA às vezes devolve o modelo com os campos de conteúdo vazios (só o cabeçalho preenchido),
+  // o que gerava planilhas em branco. Confere e pede de novo; se continuar vazio, avisa em vez de salvar.
+  let resultado, faltando = [];
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const reforco = faltando.length ? `\n\nATENÇÃO: na resposta anterior estes campos vieram vazios: ${faltando.join(", ")}.
+Preencha TODOS com conteúdo real. Se o documento de referência não trouxer a informação, elabore conforme a MSEP.` : "";
+    resultado = await perguntarJson(SISTEMA, usuario + reforco);
+    faltando = camposVazios(etapaId, resultado);
+    if (!faltando.length) break;
+    console.warn(`Etapa ${etapaId}: campos vazios (tentativa ${tentativa + 1}):`, faltando.join(", "));
+  }
+  if (faltando.length) throw new Error(`A IA devolveu o material sem conteúdo (${faltando.join(", ")}). Clique em tentar de novo.`);
   // O PER usa as datas do calendário calculado (exatas), não as que a IA sugerir.
   if (etapaId === "per" && Array.isArray(dados.aulasCronograma) && dados.aulasCronograma.length) {
     resultado.aulas = dados.aulasCronograma;
