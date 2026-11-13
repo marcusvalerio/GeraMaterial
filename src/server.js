@@ -75,9 +75,9 @@ app.post("/api/analisar", exigeLogin, upload.array("referencias"), async (req, r
 // Campos de conteúdo que não podem vir vazios em cada etapa.
 const OBRIGATORIOS = {
   per: ["capacidadesTecnicas", "conhecimentos", "estrategias", "criterios"],
-  plano: ["contextualizacao", "desafio", "resultados", "capacidades", "conhecimentos", "passos"],
+  plano: ["secoes"],
   avaliacao: ["avaliacao30.secoes", "avaliacao60.secoes"],
-  atividade: ["teorica.secoes", "pratica.secoes"],
+  atividade: ["ep190.contextualizacao", "ep190.desafio", "ep190.capacidades", "ep190.passos", "teorica.secoes", "pratica.secoes"],
 };
 const temConteudo = (v) => Array.isArray(v) ? v.some(temConteudo)
   : v && typeof v === "object" ? Object.values(v).some(temConteudo)
@@ -90,7 +90,8 @@ function camposVazios(etapaId, r) {
 // o resultado das etapas anteriores (para manter tudo coerente).
 async function executarEtapa(etapaId, dados, anteriores, referencia) {
   const etapa = ETAPAS[etapaId];
-  const ctxAnteriores = ORDEM.filter((k) => anteriores[k])
+  // Ao refazer, ignora o resultado antigo desta mesma etapa.
+  const ctxAnteriores = ORDEM.filter((k) => k !== etapaId && anteriores[k])
     .map((k) => `RESULTADO DA ETAPA "${ETAPAS[k].nome}":\n${JSON.stringify(anteriores[k])}`).join("\n\n");
   const usuario = `${referencia}\n\n${contexto(dados)}\n\n${ctxAnteriores}\n\nTAREFA: ${etapa.instrucao}`;
   // A IA às vezes devolve o modelo com os campos de conteúdo vazios (só o cabeçalho preenchido),
