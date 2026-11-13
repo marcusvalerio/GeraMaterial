@@ -30,10 +30,27 @@ export const ETAPAS = {
   },
   plano: {
     nome: "Plano de Aula",
-    instrucao: `Com base no PER, elabore o PLANO DE AULA da Unidade Curricular, aula a aula, coerente com as datas e a carga horária do PER.
-Inclua: identificação (curso, UC, carga horária, instrutor), capacidades e conhecimentos trabalhados, e para cada aula
-(tabela Aula | Data | Conhecimentos | Estratégias/atividades | Recursos | Avaliação), seguido de critérios de avaliação e referências.
-JSON: ${DOC_GENERICO}`,
+    instrucao: `Com base no PER, elabore o PLANO DE AULA da Unidade Curricular, encontro a encontro, com a profundidade de um plano
+oficial do SENAI (MSEP). Regras:
+- "aulas": um item por encontro do PER, com as mesmas datas e a mesma carga horária; o último encontro pode ser a avaliação integradora.
+- "conhecimentos": use a numeração e os nomes do plano de curso (ex.: "4.1 Sistemas de localização; 4.2 Locais de endereçamento").
+- "objetivo": um objetivo de aprendizagem observável (verbo + conteúdo + contexto).
+- "estrategia": estratégias MSEP concretas (aula dialogada, estudo de caso, situação-problema, simulação, oficina, projeto...).
+- "atividade": o que o aluno faz, com que material e qual produto entrega (2 a 3 frases).
+- "avaliacao": instrumento e evidência observada (lista de verificação, planilha, relatório, apresentação...).
+- "distribuicao": os grupos de conhecimentos com a carga horária de cada um; se sobrar carga para avaliação, explique em "observacaoCargaHoraria".
+- "organizacaoDiaria": as etapas de um encontro de 4 horas, somando 240 min.
+- "instrumentos": avaliação diagnóstica, formativa, prática e somativa, cada uma com descrição.
+JSON:
+{ "titulo": "Plano de Aula", "curso": "", "uc": "", "cargaHoraria": "60 horas", "organizacao": "15 encontros presenciais de 4 horas",
+  "instrutor": "", "referencia": "Metodologia SENAI de Educação Profissional (MSEP)",
+  "objetivoGeral": "",
+  "distribuicao": [ { "grupo": "1. Nome do grupo de conhecimentos", "ch": "4h" } ], "observacaoCargaHoraria": "",
+  "aulas": [ { "dia": 1, "data": "dd/mm/aaaa", "titulo": "", "ch": "4 horas", "conhecimentos": "", "objetivo": "",
+    "estrategia": "", "atividade": "", "avaliacao": "" } ],
+  "organizacaoIntro": "", "organizacaoDiaria": [ { "etapa": "", "tempo": "30 min", "desenvolvimento": "" } ],
+  "instrumentosIntro": "", "instrumentos": [ { "tipo": "Avaliação diagnóstica", "descricao": "" } ],
+  "recursos": "", "observacaoRecursos": "", "resultadoEsperado": "", "observacaoPedagogica": "" }`,
   },
   avaliacao: {
     nome: "Avaliações (30 e 60 pontos)",
