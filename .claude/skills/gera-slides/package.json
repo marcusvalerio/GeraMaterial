@@ -1,0 +1,9 @@
+{
+  "name": "gera-slides",
+  "private": true,
+  "description": "Dependências do gerador de slides da Skill gera-slides",
+  "dependencies": {
+    "pptxgenjs": "3.12.0",
+    "@resvg/resvg-js": "2.6.2"
+  }
+}
