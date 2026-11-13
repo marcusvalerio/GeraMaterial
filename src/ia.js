@@ -76,11 +76,14 @@ export async function perguntar(system, usuario, opcoes = {}) {
     });
     if (r.ok) break;
     j = await r.json().catch(() => ({}));
-    if (![404, 429, 500, 503].includes(r.status)) break;
+    const erroJson = r.status === 400 && /json_validate_failed/.test(JSON.stringify(j)); // Groq: a IA gerou JSON quebrado
+    if (![404, 429, 500, 503].includes(r.status) && !erroJson) break;
     // Cota esgotada (429), modelo indisponível (404) ou sobrecarregado (503/500): troca de modelo na hora.
     // Só espera e tenta de novo quando não há mais modelos de reserva.
     if (m < modelos.length - 1) { m++; continue; }
-    await new Promise((ok) => setTimeout(ok, 5000 * 2 ** Math.min(tentativa, 3)));
+    // Respeita o tempo pedido pela IA (limite por minuto), até 60 s.
+    const pedido = Number(r.headers.get("retry-after")) * 1000;
+    await new Promise((ok) => setTimeout(ok, Math.min(pedido > 0 ? pedido : 5000 * 2 ** Math.min(tentativa, 3), 60000)));
   }
   } catch (e) {
     if (e.name === "TimeoutError" || e.name === "AbortError") throw new Error("A IA demorou mais que o limite de 5 minutos nesta etapa. Clique em tentar de novo.");
@@ -89,6 +92,8 @@ export async function perguntar(system, usuario, opcoes = {}) {
   if (!r.ok) {
     const erro = Array.isArray(j) ? j[0]?.error : j.error;
     if (r.status === 429) throw new Error(`Limite gratuito da IA atingido (${nome}). Aguarde alguns minutos e tente novamente.`);
+    if (r.status === 413 || /too large|reduce your message/i.test(JSON.stringify(j)))
+      throw new Error(`O pedido ficou grande demais para o plano gratuito da IA (${nome}). Diminua AI_LIMITE_REFERENCIA na Vercel ou use um plano pago.`);
     if (r.status === 503) throw new Error(`A IA (${nome}) está sobrecarregada no momento. Tente novamente em alguns minutos.`);
     throw new Error(`Erro da IA (${nome}): ${erro?.message || JSON.stringify(j).slice(0, 300)}`);
   }

@@ -68,13 +68,24 @@ app.post("/api/analisar", exigeLogin, upload.array("referencias"), async (req, r
 // Campos de conteúdo que não podem vir vazios em cada etapa.
 const OBRIGATORIOS = {
   per: ["capacidadesTecnicas", "conhecimentos", "estrategias", "criterios"],
-  plano: ["secoes"],
+  plano: ["aulas"],
   avaliacao: ["avaliacao30.secoes", "avaliacao60.secoes"],
   atividade: ["ep190.contextualizacao", "ep190.desafio", "ep190.capacidades", "ep190.passos", "teorica.secoes", "pratica.secoes"],
 };
 const temConteudo = (v) => Array.isArray(v) ? v.some(temConteudo)
   : v && typeof v === "object" ? Object.values(v).some(temConteudo)
   : String(v ?? "").replace(/\.{3}|…/g, "").trim() !== "";
+// Modelos menores às vezes "embrulham" a resposta: { "planoDeAula": { ...campos } }. Desembrulha
+// enquanto o objeto tiver uma única chave e os campos esperados estiverem dentro dela.
+function desembrulhar(etapaId, r) {
+  const chaves = (OBRIGATORIOS[etapaId] || []).map((c) => c.split(".")[0]);
+  while (r && typeof r === "object" && !Array.isArray(r) && !chaves.some((k) => k in r)) {
+    const vals = Object.values(r).filter((v) => v && typeof v === "object" && !Array.isArray(v));
+    if (vals.length !== 1) break;
+    r = vals[0];
+  }
+  return r;
+}
 function camposVazios(etapaId, r) {
   return (OBRIGATORIOS[etapaId] || []).filter((c) => !temConteudo(c.split(".").reduce((o, k) => o?.[k], r)));
 }
@@ -113,7 +124,7 @@ async function executarEtapa(etapaId, dados, anteriores, referencia) {
   for (let tentativa = 0; tentativa < 3; tentativa++) {
     const reforco = faltando.length ? `\n\nATENÇÃO: na resposta anterior estes campos vieram vazios: ${faltando.join(", ")}.
 Preencha TODOS com conteúdo real. Se o documento de referência não trouxer a informação, elabore conforme a MSEP.` : "";
-    resultado = await perguntarJson(SISTEMA, usuario + reforco);
+    resultado = desembrulhar(etapaId, await perguntarJson(SISTEMA, usuario + reforco));
     faltando = camposVazios(etapaId, resultado);
     if (!faltando.length) break;
     console.warn(`Etapa ${etapaId}: campos vazios (tentativa ${tentativa + 1}):`, faltando.join(", "));
