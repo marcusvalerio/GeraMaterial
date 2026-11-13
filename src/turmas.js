@@ -11,12 +11,6 @@ const brParaIso = (s) => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : String(s || "").slice(0, 10);
 };
 
-function extrairJson(texto) {
-  const ini = texto.indexOf("{"), fim = texto.lastIndexOf("}");
-  if (ini < 0 || fim < 0) throw new Error("A IA não retornou um JSON válido.");
-  return JSON.parse(texto.slice(ini, fim + 1));
-}
-
 // Confere se o usuário pode mexer na turma (dono, coordenação ou admin).
 async function turmaDoUsuario(id, usuario) {
   const [t] = await sql`SELECT * FROM turmas WHERE id = ${id}`;

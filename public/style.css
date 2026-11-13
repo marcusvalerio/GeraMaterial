@@ -638,10 +638,6 @@ body[data-area="inicio"] { --area: #e7ebf2; --area-forte: #12223f; }
 .previa-corpo h4 { font-family: var(--ui); font-weight: 600; font-size: .95rem; margin: var(--esp-m) 0 var(--esp-p); }
 .previa-corpo p { margin: 0 0 var(--esp-p); }
 .previa-corpo .tabela { font-size: .82rem; }
-.previa-slide { border: 1px solid var(--linha); border-radius: var(--raio); padding: var(--esp-m) var(--esp-m); margin-top: var(--esp-m); }
-.previa-slide small { font-family: var(--ui); font-size: .72rem; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: .04em; }
-.previa-slide strong { display: block; font-family: var(--ui); font-size: 1.05rem; margin: 2px 0 var(--esp-p); }
-.previa-slide p { font-size: .85rem; color: var(--tinta-2); margin: 0 0 4px; }
 
 /* ---------- Home em grade 2×2 ---------- */
 .home-grade { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--esp-m); margin-bottom: var(--esp); }

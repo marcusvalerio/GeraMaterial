@@ -1,4 +1,4 @@
-// Converte o material (JSON genérico: titulo + secoes) em DOCX e PDF. Slides ficam em slides.js.
+// Converte o material (JSON genérico: titulo + secoes) em DOCX e PDF.
 import {
   Document, Packer, Paragraph, HeadingLevel, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle,
 } from "docx";

@@ -56,11 +56,6 @@ export function lerDiasSemAula(texto) {
   return set;
 }
 
-export function lerDataBr(s) {
-  const m = String(s || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])) : null;
-}
-
 const horas = (ch) => Number(String(ch || "").replace(",", ".").match(/[\d.]+/)?.[0] || 0);
 
 /**
