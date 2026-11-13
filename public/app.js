@@ -5,8 +5,10 @@ import { $, esc, iniciarPagina } from "./comum.js";
 const ETAPAS = [
   { id: "per", nome: "PER – Plano de Ensino e Recursos", formato: "Excel",
     downloads: (r) => [["Baixar PER", "per", r, "PER"]] },
-  { id: "plano", nome: "Plano de Aula (EP-190)", formato: "Excel",
-    downloads: (r) => [["Baixar EP-190", "ep190", r, "EP-190"]] },
+  { id: "plano", nome: "Plano de Aula", formato: "Word e PDF",
+    // Materiais antigos: o Plano de Aula era o próprio EP-190.
+    downloads: (r) => r.secoes ? [["Plano de Aula · Word", "docx", r, "Plano de Aula"], ["PDF", "pdf", r, "Plano de Aula", true]]
+      : [["Baixar EP-190", "ep190", r, "EP-190"]] },
   { id: "avaliacao", nome: "Avaliações 30 e 60 pontos", formato: "Word e PDF",
     downloads: (r, it) => {
       const cab = (pts) => cabecalhoProva(it, pts);
@@ -18,8 +20,9 @@ const ETAPAS = [
         ["60 · PDF", "pdf", a60, "Avaliacao 60 pontos", true],
       ];
     } },
-  { id: "atividade", nome: "Atividade do educador", formato: "Word",
+  { id: "atividade", nome: "Atividade do educador (EP-190)", formato: "Excel e Word",
     downloads: (r) => [
+      ...(r.ep190 ? [["Baixar EP-190", "ep190", r.ep190, "EP-190"]] : []),
       ["Teórica · Word", "docx", r.teorica, "Atividade teorica"],
       ["Prática · Word", "docx", r.pratica, "Atividade pratica"],
     ] },
@@ -708,7 +711,8 @@ function htmlGenerico(o) {
 function abrirPrevia(et, r) {
   let html;
   if (et.id === "avaliacao") html = htmlDoc(r.avaliacao30) + htmlDoc(r.avaliacao60);
-  else if (et.id === "atividade") html = htmlDoc(r.teorica) + htmlDoc(r.pratica);
+  else if (et.id === "atividade") html = (r.ep190 ? `<h3>EP-190</h3>${htmlGenerico(r.ep190)}` : "") + htmlDoc(r.teorica) + htmlDoc(r.pratica);
+  else if (et.id === "plano" && r.secoes) html = htmlDoc(r);
   else if (et.id === "slides") html = (r.slides || []).map((sl, i) => `<div class="previa-slide"><small>${i + 1}${sl.olho ? ` · ${esc(sl.olho)}` : ""}</small>
       <strong>${esc(sl.titulo || "")}</strong>${textosDe(sl).slice(0, 8).map((t) => `<p>${esc(t)}</p>`).join("")}</div>`).join("");
   else html = htmlGenerico(r);
