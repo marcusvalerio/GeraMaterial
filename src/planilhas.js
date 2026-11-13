@@ -54,9 +54,8 @@ async function preencher(arquivo, valoresPorAba) {
   for (const [aba, valores] of Object.entries(valoresPorAba)) {
     const caminho = `xl/worksheets/${aba}.xml`;
     let xml = await zip.file(caminho).async("string");
-    for (const [ref, v] of Object.entries(valores)) {
-      if (v !== undefined && v !== null && v !== "") xml = setCell(xml, ref, v);
-    }
+    // Toda célula mapeada é gravada, mesmo vazia: assim nenhum conteúdo antigo do modelo sobra no arquivo gerado.
+    for (const [ref, v] of Object.entries(valores)) xml = setCell(xml, ref, v ?? "");
     zip.file(caminho, xml);
   }
   // Força o Excel a recalcular fórmulas ao abrir.
