@@ -40,6 +40,23 @@ async function textoReferencias(arquivos) {
   return partes.join("\n\n");
 }
 
+// Para identificar curso e UCs a IA não precisa do plano inteiro (estoura o plano gratuito da Groq):
+// manda o começo do documento (nome do curso) e o trecho da organização curricular (lista de UCs).
+const LIMITE_ANALISE = Number(process.env.AI_LIMITE_ANALISE) || 14000;
+function trechoAnalise(texto) {
+  if (texto.length <= LIMITE_ANALISE) return texto;
+  const inicio = texto.slice(0, 3000);
+  const resto = LIMITE_ANALISE - inicio.length;
+  const t = texto.toLowerCase();
+  let pos = -1;
+  for (const termo of ["organização curricular", "matriz curricular", "itinerário formativo", "unidades curriculares", "unidade curricular"]) {
+    pos = t.indexOf(termo, 3000);
+    if (pos >= 0) break;
+  }
+  if (pos < 0) return texto.slice(0, LIMITE_ANALISE);
+  return `${inicio}\n[...]\n${texto.slice(pos, pos + resto)}`;
+}
+
 // Lê o plano de curso enviado e devolve o curso e a lista de unidades curriculares.
 app.post("/api/analisar", exigeLogin, upload.array("referencias"), async (req, res) => {
   try {
@@ -48,7 +65,7 @@ app.post("/api/analisar", exigeLogin, upload.array("referencias"), async (req, r
     if (texto.replace(/DOCUMENTO DE REFERÊNCIA \([^)]*\):/g, "").trim().length < 200) {
       return res.status(422).json({ erro: "Não foi possível ler o texto do arquivo. Se for um PDF escaneado (imagem), envie a versão em Word ou um PDF com texto." });
     }
-    const r = await perguntarJson(SISTEMA, `${texto}\n\nTAREFA: ${ANALISE}`, 3, { rapido: true });
+    const r = await perguntarJson(SISTEMA, `${trechoAnalise(texto)}\n\nTAREFA: ${ANALISE}`, 3, { rapido: true });
     // Remove UCs repetidas (o plano costuma listar as UCs mais de uma vez).
     const vistas = new Set();
     r.ucs = (r.ucs || []).filter((u) => {

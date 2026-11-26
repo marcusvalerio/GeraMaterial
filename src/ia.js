@@ -93,7 +93,7 @@ export async function perguntar(system, usuario, opcoes = {}) {
     const erro = Array.isArray(j) ? j[0]?.error : j.error;
     if (r.status === 429) throw new Error(`Limite gratuito da IA atingido (${nome}). Aguarde alguns minutos e tente novamente.`);
     if (r.status === 413 || /too large|reduce your message/i.test(JSON.stringify(j)))
-      throw new Error(`O pedido ficou grande demais para o plano gratuito da IA (${nome}). Diminua AI_LIMITE_REFERENCIA na Vercel ou use um plano pago.`);
+      throw new Error(`O pedido ficou grande demais para o plano gratuito da IA (${nome}). Diminua AI_LIMITE_ANALISE (leitura do plano) ou AI_LIMITE_REFERENCIA (geração) na Vercel, ou use um plano pago.`);
     if (r.status === 503) throw new Error(`A IA (${nome}) está sobrecarregada no momento. Tente novamente em alguns minutos.`);
     throw new Error(`Erro da IA (${nome}): ${erro?.message || JSON.stringify(j).slice(0, 300)}`);
   }
